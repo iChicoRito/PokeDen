@@ -1,0 +1,473 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+}
+
+/* Moss theme — the single default theme for the whole design system. */
+:root {
+  --radius: 1.4rem;
+  --background: oklch(0.994 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(0.994 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(0.9911 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0.6411 0.0666 130.1256);
+  --primary-foreground: oklch(0.985 0.001 106.423);
+  --secondary: oklch(0.8789 0.0133 130.7936);
+  --secondary-foreground: oklch(0.1344 0 0);
+  --muted: oklch(0.9702 0 0);
+  --muted-foreground: oklch(0.6234 0 0);
+  --accent: oklch(0.4429 0.0444 134.5073);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.4926 0.1864 26.2192);
+  --border: oklch(0.93 0.0094 286.2156);
+  --input: oklch(0.9401 0 0);
+  --ring: oklch(0.783 0.0384 132.737);
+  --chart-1: oklch(0.648 0.2 131.684);
+  --chart-2: oklch(0.808 0.114 19.571);
+  --chart-3: #ffda1a;
+  --chart-4: #0051ba;
+  --chart-5: oklch(0.709 0.01 56.259);
+  --sidebar: oklch(0.9777 0.0051 247.8763);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.93 0.0136 134.8996);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0.9401 0 0);
+  --sidebar-ring: oklch(0.783 0.0384 132.737);
+
+  /* fonts — repo vars, not hardcoded stacks; Inter & JetBrains Mono are registered next/fonts */
+  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-mono: IBM Plex Mono, monospace;
+  --font-serif: Lora, serif;
+
+  /* shadow primitives + tokens */
+  --shadow-x: 0px;
+  --shadow-y: 2px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.16;
+  --shadow-color: #000000;
+  --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);
+  --shadow-xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);
+  --shadow-sm: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
+  --shadow: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
+  --shadow-md: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 2px 4px -1px hsl(0 0% 0% / 0.16);
+  --shadow-lg: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
+  --shadow-xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
+  --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.4);
+
+  /* tracking */
+  --tracking-normal: -0.025em;
+}
+
+.dark {
+  --background: oklch(0.1173 0.009 73.4751);
+  --foreground: oklch(0.9796 0.0017 67.8026);
+  --card: oklch(0.1609 0.0115 80.9823);
+  --card-foreground: oklch(0.9796 0.0017 67.8026);
+  --popover: oklch(0.1405 0.0109 88.4982);
+  --popover-foreground: oklch(0.9796 0.0017 67.8026);
+  --primary: oklch(0.783 0.0384 132.737);
+  --primary-foreground: oklch(0.0986 0.0063 72.5271);
+  --secondary: oklch(0.251 0.0148 76.2105);
+  --secondary-foreground: oklch(0.9198 0.0075 80.7204);
+  --muted: oklch(0.2203 0.0129 77.9565);
+  --muted-foreground: oklch(0.6511 0.0081 80.7132);
+  --accent: oklch(0.4429 0.0444 134.5073);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.4926 0.1864 26.2192);
+  --border: oklch(0.2806 0.0246 82.6847);
+  --input: oklch(0.1994 0.0155 75.9533);
+  --ring: oklch(0.783 0.0384 132.737);
+  --chart-1: oklch(0.5636 0.1645 136.9338);
+  --chart-2: oklch(0.6509 0.1756 135.9702);
+  --chart-3: oklch(0.7246 0.1732 135.119);
+  --chart-4: oklch(0.8539 0.1402 133.7838);
+  --chart-5: oklch(0.783 0.0384 132.737);
+  --sidebar: oklch(0.0986 0.0063 72.5271);
+  --sidebar-foreground: oklch(0.9498 0.0046 78.2977);
+  --sidebar-primary: oklch(0.783 0.0384 132.737);
+  --sidebar-primary-foreground: oklch(0.0986 0.0063 72.5271);
+  --sidebar-accent: oklch(0.4429 0.0444 134.5073);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.2513 0.02 80.2775);
+  --sidebar-ring: oklch(0.783 0.0384 132.737);
+
+  /* fonts */
+  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-mono: IBM Plex Mono, monospace;
+  --font-serif: Lora, serif;
+
+  /* shadow tokens (dark; no --tracking-normal here — inherits :root -0.02em) */
+  --shadow-x: 0px;
+  --shadow-y: 2px;
+  --shadow-blur: 12px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.35;
+  --shadow-color: #000000;
+  --shadow-2xs: 0px 2px 12px 0px hsl(0 0% 0% / 0.17);
+  --shadow-xs: 0px 2px 12px 0px hsl(0 0% 0% / 0.17);
+  --shadow-sm: 0px 2px 12px 0px hsl(0 0% 0% / 0.35), 0px 1px 2px -1px hsl(0 0% 0% / 0.35);
+  --shadow: 0px 2px 12px 0px hsl(0 0% 0% / 0.35), 0px 1px 2px -1px hsl(0 0% 0% / 0.35);
+  --shadow-md: 0px 2px 12px 0px hsl(0 0% 0% / 0.35), 0px 2px 4px -1px hsl(0 0% 0% / 0.35);
+  --shadow-lg: 0px 2px 12px 0px hsl(0 0% 0% / 0.35), 0px 4px 6px -1px hsl(0 0% 0% / 0.35);
+  --shadow-xl: 0px 2px 12px 0px hsl(0 0% 0% / 0.35), 0px 8px 10px -1px hsl(0 0% 0% / 0.35);
+  --shadow-2xl: 0px 2px 12px 0px hsl(0 0% 0% / 0.88);
+  --radius: 1.4rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    letter-spacing: var(--tracking-normal);
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  html[data-font="inter"] body {
+    --font-sans: var(--font-inter);
+  }
+  html[data-font="notoSans"] body {
+    --font-sans: var(--font-noto-sans);
+  }
+  html[data-font="nunitoSans"] body {
+    --font-sans: var(--font-nunito-sans);
+  }
+  html[data-font="figtree"] body {
+    --font-sans: var(--font-figtree);
+  }
+  html[data-font="roboto"] body {
+    --font-sans: var(--font-roboto);
+  }
+  html[data-font="geist"] body {
+    --font-sans: var(--font-geist);
+  }
+  html[data-font="raleway"] body {
+    --font-sans: var(--font-raleway);
+  }
+  html[data-font="dmSans"] body {
+    --font-sans: var(--font-dm-sans);
+  }
+  html[data-font="publicSans"] body {
+    --font-sans: var(--font-public-sans);
+  }
+  html[data-font="outfit"] body {
+    --font-sans: var(--font-outfit);
+  }
+  html[data-font="geistMono"] body {
+    --font-sans: var(--font-geist-mono);
+  }
+  html[data-font="geistPixelSquare"] body {
+    --font-sans: var(--font-geist-pixel-square);
+  }
+  html[data-font="jetBrainsMono"] body {
+    --font-sans: var(--font-jetbrains-mono);
+  }
+  html[data-font="notoSerif"] body {
+    --font-sans: var(--font-noto-serif);
+  }
+  html[data-font="robotoSlab"] body {
+    --font-sans: var(--font-roboto-slab);
+  }
+  html[data-font="merriweather"] body {
+    --font-sans: var(--font-merriweather);
+  }
+  html[data-font="lora"] body {
+    --font-sans: var(--font-lora);
+  }
+  html[data-font="playfairDisplay"] body {
+    --font-sans: var(--font-playfair-display);
+  }
+}
+
+html {
+  overscroll-behavior: none;
+}
+
+.disable-transitions * {
+  transition: none !important;
+}
+
+[data-print-root] {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: Letter;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 8.5in !important;
+    height: 11in !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body > *:not([data-print-root]) {
+    display: none !important;
+  }
+
+  [data-print-root] {
+    display: block !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: white !important;
+  }
+
+  [data-print-root] [data-print-paper] {
+    width: 8.5in !important;
+    height: 11in !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  [data-print-root] [data-print-paper],
+  [data-print-root] [data-print-paper] * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* PokeDen companion motion is optional and never carries academic meaning.
+ * Skeletons pulse for the same reason: the pulse is decoration — the shape and
+ * role="status" label carry the meaning — so reduced-motion users get a static
+ * placeholder. The action Spinner is essential status motion and keeps spinning. */
+@media (prefers-reduced-motion: reduce) {
+  .pokeden-motion,
+  .pokeden-companion-idle,
+  .pokeden-step-enter,
+  .pokeden-step-exit,
+  [data-slot="skeleton"] {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+html[data-pokeden-reduced-motion="true"] .pokeden-motion,
+html[data-pokeden-companion-movement="false"] .pokeden-motion,
+html[data-pokeden-reduced-motion="true"] .pokeden-companion-idle,
+html[data-pokeden-companion-movement="false"] .pokeden-companion-idle,
+html[data-pokeden-reduced-motion="true"] .pokeden-step-enter,
+html[data-pokeden-companion-movement="false"] .pokeden-step-enter,
+html[data-pokeden-reduced-motion="true"] .pokeden-step-exit,
+html[data-pokeden-companion-movement="false"] .pokeden-step-exit,
+html[data-pokeden-reduced-motion="true"] [data-slot="skeleton"] {
+  animation: none;
+  transition: none;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Onboarding utilities
+ * Small, composable classes for the onboarding flow (welcome/completion,
+ * companion selection, subject setup). Components otherwise style with plain
+ * Tailwind utilities; these exist only where a single rule must stay in sync
+ * (contrast, focus, motion) or where the CSS would be awkward inline.
+ * All colors reference theme tokens, so light/dark and presets keep working.
+ * ------------------------------------------------------------------------- */
+
+/* Icon chip (welcome/completion): solid primary fills the chip, so the icon
+ * reads at high contrast — bg-primary/10 + text-primary only reaches ~1.5:1
+ * and is unacceptable for the brand mark. Dark mode flips via the .dark
+ * token overrides above. */
+.pokeden-chip {
+  @apply grid size-16 place-items-center rounded-2xl bg-primary text-primary-foreground;
+}
+
+/* Progress bar track: bg-border instead of bg-muted — a muted track sits at
+ * ~1.03:1 against the background and is invisible to low-vision users. The
+ * indicator stays bg-primary (contrast against the border track is fine). */
+.pokeden-progress-track {
+  @apply h-1.5 w-full overflow-hidden rounded-full bg-border;
+}
+
+/* Whole-card focus ring (companion cards, subject add card): focus-within
+ * keeps the ring on the outer card instead of only the 16px radio dot, so
+ * keyboard users see where focus actually is. transition-all animates the
+ * border/ring; motion-reduce drops it (handled via the kill-switch below). */
+.pokeden-card-ring {
+  @apply rounded-xl border border-border transition-all focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50;
+}
+
+/* Step enter/exit: tw-animate-css enter/exit keyframes. duration-300 drives
+ * both directions. motion-reduce: variants cover prefers-reduced-motion; the
+ * app-level opt-outs (data-pokeden-reduced-motion / companion-movement) are
+ * handled by the kill-switch selector lists below. */
+.pokeden-step-enter {
+  @apply animate-in fade-in slide-in-from-right-4 duration-300 motion-reduce:animate-none motion-reduce:transition-none;
+}
+
+.pokeden-step-exit {
+  @apply animate-out fade-out slide-out-to-left-4 duration-300 motion-reduce:animate-none motion-reduce:transition-none;
+}
+
+/* Companion idle bob: slow scale/translate ease — pure decoration. Keyframes
+ * are added to the .pokeden-motion selector list above, so it is disabled by
+ * prefers-reduced-motion AND by the data-pokeden-reduced-motion /
+ * data-pokeden-companion-movement opt-outs (see kill-switch above). */
+.pokeden-companion-idle {
+  animation: pokeden-idle-bob 3s ease-in-out infinite;
+}
+
+@keyframes pokeden-idle-bob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-3px) scale(1.015);
+  }
+}
+
+/* Revisit/error banner: the repo's standard bordered tint pattern
+ * (border-destructive/30 bg-destructive/10 text-destructive elsewhere), with
+ * a neutral variant for non-error revisits. Tokens, not hardcoded colors. */
+.pokeden-banner {
+  @apply rounded-xl border px-4 py-3 text-sm;
+}
+
+.pokeden-banner-error {
+  @apply border-destructive/30 bg-destructive/10 text-destructive;
+}
+
+.pokeden-banner-neutral {
+  @apply border-border/30 bg-muted/50 text-muted-foreground;
+}
+
+/* TipTap WYSIWYG note editor */
+.note-editor-content {
+  @apply text-sm leading-relaxed outline-none;
+}
+
+.note-editor-content p {
+  @apply my-1;
+}
+
+.note-editor-content h1,
+.note-editor-content h2,
+.note-editor-content h3 {
+  @apply font-semibold text-foreground;
+}
+
+.note-editor-content h1 {
+  @apply text-xl;
+}
+
+.note-editor-content h2 {
+  @apply text-lg;
+}
+
+.note-editor-content h3 {
+  @apply text-base;
+}
+
+.note-editor-content ul {
+  @apply my-1 list-disc pl-5;
+}
+
+.note-editor-content ol {
+  @apply my-1 list-decimal pl-5;
+}
+
+.note-editor-content li {
+  @apply marker:text-muted-foreground;
+}
+
+.note-editor-content a {
+  @apply text-primary underline underline-offset-2;
+}
+
+.note-editor-content code {
+  @apply rounded bg-muted px-1 py-0.5 font-mono text-xs;
+}
+
+.note-editor-content pre {
+  @apply overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs;
+}
+
+.note-editor-content blockquote {
+  @apply border-border border-l-2 pl-3 text-muted-foreground;
+}
+
+.note-editor-content hr {
+  @apply border-border;
+}
+
+.note-editor-content .is-editor-empty:first-child::before {
+  @apply pointer-events-none float-left h-0 text-muted-foreground;
+  content: attr(data-placeholder);
+}
