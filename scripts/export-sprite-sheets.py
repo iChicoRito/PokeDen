@@ -34,22 +34,23 @@ FRAME_RGBA_BYTES = FRAME_WIDTH * FRAME_HEIGHT * 4
 
 # folder -> (species id, display name, source stem)
 SPECIES = [
-    ("blastoise", "squirtle", "Squirtle"),
-    ("bulbasaur", "bulbasaur", "Bulbasaur"),
-    ("charizard", "charmander", "Charmander"),
-    ("gengar", "gastly", "Gastly"),
-    ("prinplup", "piplup", "Piplup"),
-    ("snorlax", "munchlax", "Munchlax"),
-    ("wigglypuff", "jigglypuff", "Jigglypuff"),
+    ("blastoise", "squirtle", "Squirtle", "squirtle"),
+    ("bulbasaur", "bulbasaur", "Bulbasaur", "ivysaur"),
+    ("charizard", "charmander", "Charmander", "charmander"),
+    ("gengar", "gastly", "Gastly", "gastly"),
+    ("prinplup", "piplup", "Piplup", "piplup"),
+    ("snorlax", "munchlax", "Munchlax", "munchlax"),
+    ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
 ]
 
-# Normalize the truncated tag name present in the six 6-tag files.
+# Normalize the typos present in the source tags.
 TAG_NAME_FIXES = {
+    "idle-leftt": "idle-left",
     "walk-dow": "walk-down",
 }
 
-# For the six 6-tag files, expand the combined horizontal tags into the four
-# exported states. Left facings flip the shared right-facing frames.
+# For files with combined horizontal tags, expand them into the four exported
+# states. Left facings flip the shared right-facing frames.
 EXPANDED_STATES: dict[str, dict[str, bool | None]] = {
     "idle-left-right": {"idle-left": True, "idle-right": None},
     "walk-left-right": {"walking-left": True, "walking-right": None},
@@ -65,6 +66,7 @@ STATE_ORDER = ("idle-left", "idle-right", "walking-left", "walking-right")
 
 # These tag ranges must cover exactly 0..frameCount-1 in the source files.
 EXPECTED_6TAG_RANGES = [(0, 0), (1, 1), (2, 2), (3, 6), (7, 10), (11, 14)]
+EXPECTED_7TAG_RANGES = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 7), (8, 11), (12, 15)]
 EXPECTED_8TAG_RANGES = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 7), (8, 11), (12, 15), (16, 19)]
 
 
@@ -183,6 +185,23 @@ def build_horizontal_export(
         )
         require(len(frames) == 20, f"8-tag file has {len(frames)} frames, expected 20")
         horizontal_tag_names = list(STATE_TAGS_8.values())
+    elif len(tags) == 7:
+        expected_names = {
+            "idle-down",
+            "idle-up",
+            "idle-left",
+            "idle-right",
+            "walk-down",
+            "walk-left",
+            "walk-right",
+        }
+        require(set(names) == expected_names, f"7-tag names mismatch: {names}")
+        require(
+            [(frm, to) for _name, frm, to in tags] == EXPECTED_7TAG_RANGES,
+            f"7-tag ranges mismatch: {tags}",
+        )
+        require(len(frames) == 16, f"7-tag file has {len(frames)} frames, expected 16")
+        horizontal_tag_names = list(STATE_TAGS_8.values())
     else:
         require(len(tags) == 6, f"unexpected tag count {len(tags)}: {names}")
         expected_names = {
@@ -234,12 +253,12 @@ def build_horizontal_export(
 
     states: dict[str, tuple[int, int, bool | None]] = {}
     for state_name in STATE_ORDER:
-        if len(tags) == 8:
-            tag_name = STATE_TAGS_8[state_name]
-            flip = None
-        else:
+        if len(tags) == 6:
             tag_name = "idle-left-right" if state_name.startswith("idle-") else "walk-left-right"
             flip = EXPANDED_STATES[tag_name][state_name]
+        else:
+            tag_name = STATE_TAGS_8[state_name]
+            flip = None
         frm, to = compact_range(tag_name)
         states[state_name] = (frm, to, flip)
 
@@ -328,7 +347,15 @@ def generate_module(entries: list[dict]) -> str:
     lines.append("};")
     lines.append("")
     lines.append("export const FIRST_EVOLUTION_BY_COMPANION: Record<CompanionId, SpriteSpecies> = {")
-    for companion_id, species_id in [("blastoise", "squirtle"), ("bulbasaur", "bulbasaur"), ("charizard", "charmander")]:
+    for companion_id, species_id in [
+        ("blastoise", "squirtle"),
+        ("bulbasaur", "bulbasaur"),
+        ("charizard", "charmander"),
+        ("gengar", "gastly"),
+        ("prinplup", "piplup"),
+        ("snorlax", "munchlax"),
+        ("wigglypuff", "jigglypuff"),
+    ]:
         lines.append(f"  {companion_id}: {ts_literal(species_id)},")
     lines.append("};")
     lines.append("")
@@ -337,8 +364,8 @@ def generate_module(entries: list[dict]) -> str:
 
 def main() -> int:
     entries: list[dict] = []
-    for folder, species_id, display_name in SPECIES:
-        source = SPRITES_ROOT / folder / f"{species_id}.aseprite"
+    for folder, species_id, display_name, source_stem in SPECIES:
+        source = SPRITES_ROOT / folder / f"{source_stem}.aseprite"
         require(source.exists(), f"missing source: {source}")
         width, height, frames, raw_tags = parse_file(source)
         tags = normalize_tags(raw_tags)

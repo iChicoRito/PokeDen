@@ -8,7 +8,7 @@ import { PawPrint, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { COMPANIONS, resolveCompanionId } from "@/features/pokeden/companions";
+import { COMPANION_CATALOG, resolveCompanionId } from "@/features/pokeden/companions";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 
 export function CompanionDock() {
@@ -16,7 +16,7 @@ export function CompanionDock() {
   const companion = usePokeDenStore((state) => state.data.companionPreferences);
 
   const companionId = resolveCompanionId(companion.selected);
-  const entry = COMPANIONS.find((item) => item.id === companionId) ?? COMPANIONS[0];
+  const entry = COMPANION_CATALOG.find((item) => item.id === companionId) ?? COMPANION_CATALOG[0];
 
   return (
     <Card className="w-full rounded-2xl">
@@ -45,7 +45,7 @@ export function CompanionDock() {
             <div className="text-muted-foreground text-xs">Companions never interrupt your focus.</div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => router.push("/settings")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/companions")}>
           <Settings2 aria-hidden="true" />
           Companion settings
         </Button>

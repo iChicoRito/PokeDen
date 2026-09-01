@@ -1,6 +1,6 @@
 // Single source of truth for the study-companion catalog (T-07).
 // Consumed by the onboarding companion step and the Settings companion card.
-export type CompanionId = "bulbasaur" | "charizard" | "blastoise";
+export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "prinplup" | "snorlax" | "wigglypuff";
 
 export type CompanionEntry = {
   id: CompanionId;
@@ -8,7 +8,7 @@ export type CompanionEntry = {
   description: string;
   tagline: string;
   personality: "calm" | "cheerful" | "focused";
-  /** Public URL of the profile PNG (1000×1000, artwork derived from public/assets/background/pokemon-profiles.aseprite). */
+  /** Public URL of the portrait asset used in companion cards and the focus dock. */
   image: string;
 };
 
@@ -39,6 +39,80 @@ export const COMPANIONS: readonly CompanionEntry[] = [
   },
 ];
 
+export type CompanionEvolution = {
+  name: string;
+  companionLevel: number;
+  studyLevel: number;
+};
+
+export type CompanionCatalogEntry = CompanionEntry & {
+  unlockStudyLevel: number;
+  evolutions?: readonly CompanionEvolution[];
+};
+
+export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
+  {
+    ...COMPANIONS[0],
+    unlockStudyLevel: 1,
+    evolutions: [
+      { name: "Ivysaur", companionLevel: 3, studyLevel: 3 },
+      { name: "Venusaur", companionLevel: 6, studyLevel: 6 },
+    ],
+  },
+  {
+    ...COMPANIONS[1],
+    unlockStudyLevel: 1,
+    evolutions: [
+      { name: "Charmeleon", companionLevel: 3, studyLevel: 3 },
+      { name: "Charizard", companionLevel: 6, studyLevel: 6 },
+    ],
+  },
+  {
+    ...COMPANIONS[2],
+    unlockStudyLevel: 1,
+    evolutions: [
+      { name: "Wartortle", companionLevel: 3, studyLevel: 3 },
+      { name: "Blastoise", companionLevel: 6, studyLevel: 6 },
+    ],
+  },
+  {
+    id: "gengar",
+    name: "Gastly",
+    description: "Mysterious and playful",
+    tagline: "A little spooky, a lot of fun.",
+    personality: "cheerful",
+    image: "/assets/profiles/gengar-profile.png",
+    unlockStudyLevel: 2,
+  },
+  {
+    id: "prinplup",
+    name: "Piplup",
+    description: "Proud and determined",
+    tagline: "Small steps, strong spirit.",
+    personality: "focused",
+    image: "/assets/sprites/prinplup/piplup-sheet.png",
+    unlockStudyLevel: 3,
+  },
+  {
+    id: "snorlax",
+    name: "Munchlax",
+    description: "Relaxed and dependable",
+    tagline: "Take a breath, then keep going.",
+    personality: "calm",
+    image: "/assets/profiles/snorlax-profile.png",
+    unlockStudyLevel: 4,
+  },
+  {
+    id: "wigglypuff",
+    name: "Jigglypuff",
+    description: "Gentle and expressive",
+    tagline: "A soft song for every study session.",
+    personality: "cheerful",
+    image: "/assets/profiles/wigglypuff-profile.png",
+    unlockStudyLevel: 5,
+  },
+];
+
 export const DEFAULT_COMPANION: CompanionId = "bulbasaur";
 
 // Legacy abstract companions used before T-07; map them so stored
@@ -55,5 +129,5 @@ export function resolveCompanionId(value: string | null | undefined): CompanionI
   if (!normalized) return DEFAULT_COMPANION;
   const legacy = LEGACY_COMPANION_IDS[normalized];
   if (legacy) return legacy;
-  return COMPANIONS.some((item) => item.id === normalized) ? (normalized as CompanionId) : DEFAULT_COMPANION;
+  return COMPANION_CATALOG.some((item) => item.id === normalized) ? (normalized as CompanionId) : DEFAULT_COMPANION;
 }

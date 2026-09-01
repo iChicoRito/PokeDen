@@ -1,6 +1,7 @@
 import { addDays, addMinutes, setHours, setMinutes, startOfDay, subDays } from "date-fns";
 
 import type { PokeDenData } from "@/features/pokeden/domain";
+import { backfillStudyProgress, createEmptyStudyProgress } from "@/features/pokeden/progression";
 
 function atDay(base: Date, offset: number, hours: number, minutes = 0): string {
   return setMinutes(setHours(addDays(startOfDay(base), offset), hours), minutes).toISOString();
@@ -24,8 +25,9 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       label: "Problem-solving workshop",
     });
   }
-  return {
-    version: 1,
+  const data: PokeDenData = {
+    version: 2,
+    studyProgress: createEmptyStudyProgress(),
     setupCompleted: true,
     onboardingStep: 8,
     profile: {
@@ -362,4 +364,5 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
     activeTimer: null,
     updatedAt: timestamp,
   };
+  return backfillStudyProgress(data);
 }

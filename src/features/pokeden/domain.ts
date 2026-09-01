@@ -195,6 +195,36 @@ export const companionStateSchema = z.object({
   lastInteractionAt: isoDateTime.nullable(),
 });
 
+export const studyActivityKindSchema = z.enum([
+  "pomodoro",
+  "planned-session",
+  "assignment",
+  "exam-topic-review",
+  "daily-goal",
+]);
+
+export const studyRewardSchema = z.object({
+  id,
+  sourceId: id,
+  kind: studyActivityKindSchema,
+  xp: z.number().int().nonnegative(),
+  minutes: z.number().int().nonnegative(),
+  companionId: nullableId,
+  completedAt: isoDateTime,
+});
+
+export const companionProgressSchema = z.object({
+  companionXp: z.number().int().nonnegative(),
+  studyMinutes: z.number().int().nonnegative(),
+  evolutionStage: z.number().int().nonnegative(),
+});
+
+export const studyProgressSchema = z.object({
+  studyXp: z.number().int().nonnegative(),
+  rewards: z.array(studyRewardSchema),
+  companions: z.record(z.string(), companionProgressSchema),
+});
+
 export const companionEventTypeSchema = z.enum([
   "TASK_COMPLETED",
   "ALL_DAILY_TASKS_COMPLETED",
@@ -244,7 +274,7 @@ export const calendarEventSchema = z.object({
 });
 
 export const pokeDenDataSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   setupCompleted: z.boolean(),
   onboardingStep: z.number().int().min(0),
   profile: studentProfileSchema,
@@ -258,6 +288,7 @@ export const pokeDenDataSchema = z.object({
   studyPreferences: studyPreferencesSchema,
   companionPreferences: companionPreferencesSchema,
   companionState: companionStateSchema,
+  studyProgress: studyProgressSchema,
   companionEvents: z.array(companionEventSchema),
   activeTimer: activeTimerSchema.nullable(),
   updatedAt: isoDateTime,
@@ -281,6 +312,10 @@ export type StudyPreferences = z.infer<typeof studyPreferencesSchema>;
 export type CompanionPreferences = z.infer<typeof companionPreferencesSchema>;
 export type CompanionMood = z.infer<typeof companionMoodSchema>;
 export type CompanionState = z.infer<typeof companionStateSchema>;
+export type StudyActivityKind = z.infer<typeof studyActivityKindSchema>;
+export type StudyReward = z.infer<typeof studyRewardSchema>;
+export type CompanionProgress = z.infer<typeof companionProgressSchema>;
+export type StudyProgress = z.infer<typeof studyProgressSchema>;
 export type CompanionEventType = z.infer<typeof companionEventTypeSchema>;
 export type CompanionEvent = z.infer<typeof companionEventSchema>;
 export type ActiveTimer = z.infer<typeof activeTimerSchema>;

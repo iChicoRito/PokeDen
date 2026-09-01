@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
+  PawPrint,
   Settings,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export const POKEDEN_NAVIGATION: readonly PokeDenNavigationGroup[] = [
       { title: "Subjects", href: "/subjects", icon: BookOpen },
       { title: "Tasks", href: "/tasks", icon: ListTodo },
       { title: "Study planner", href: "/study-planner", icon: CalendarDays },
+      { title: "Companions", href: "/companions", icon: PawPrint },
     ],
   },
   {

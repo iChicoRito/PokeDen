@@ -45,8 +45,8 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
     states: {
       "idle-left": { from: 0, to: 0 },
       "idle-right": { from: 1, to: 1 },
-      "walking-left": { from: 6, to: 9 },
-      "walking-right": { from: 2, to: 5 },
+      "walking-left": { from: 2, to: 5 },
+      "walking-right": { from: 6, to: 9 },
     },
   },
   charmander: {
@@ -130,4 +130,8 @@ export const FIRST_EVOLUTION_BY_COMPANION: Record<CompanionId, SpriteSpecies> = 
   blastoise: "squirtle",
   bulbasaur: "bulbasaur",
   charizard: "charmander",
+  gengar: "gastly",
+  prinplup: "piplup",
+  snorlax: "munchlax",
+  wigglypuff: "jigglypuff",
 };

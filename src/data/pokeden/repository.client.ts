@@ -1,4 +1,5 @@
-import { type PokeDenData, pokeDenDataSchema } from "@/features/pokeden/domain";
+import { type PokeDenData, pokeDenDataSchema, studyProgressSchema } from "@/features/pokeden/domain";
+import { backfillStudyProgress, createEmptyStudyProgress } from "@/features/pokeden/progression";
 
 import { createDemoPokeDenData } from "./demo-fixtures";
 
@@ -34,14 +35,22 @@ function getStorage(): Storage {
 }
 
 function migrate(candidate: unknown, now = new Date()): PokeDenData | null {
-  const current = pokeDenDataSchema.safeParse(candidate);
-  if (current.success) return current.data;
   if (!candidate || typeof candidate !== "object") return null;
-  const legacy = candidate as Record<string, unknown>;
-  if (legacy.version !== 0 && legacy.version !== undefined) return null;
+  const stored = candidate as Record<string, unknown>;
+  const version = stored.version;
+  if (version !== 0 && version !== 1 && version !== 2 && version !== undefined) return null;
+
   const defaults = createDemoPokeDenData(now);
-  const migrated = pokeDenDataSchema.safeParse({ ...defaults, ...legacy, version: 1, updatedAt: now.toISOString() });
-  return migrated.success ? migrated.data : null;
+  const storedProgress = studyProgressSchema.safeParse(stored.studyProgress);
+  const normalized = {
+    ...defaults,
+    ...stored,
+    studyProgress: storedProgress.success ? storedProgress.data : createEmptyStudyProgress(),
+    version: 2,
+    updatedAt: version === 2 ? stored.updatedAt : now.toISOString(),
+  };
+  const parsed = pokeDenDataSchema.safeParse(normalized);
+  return parsed.success ? backfillStudyProgress(parsed.data) : null;
 }
 
 function parse(raw: string | null): PokeDenData | null {

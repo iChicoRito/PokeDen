@@ -13,12 +13,14 @@ import {
   subscribeToPokeDenStorage,
 } from "@/data/pokeden/repository.client";
 
+import { COMPANION_CATALOG, type CompanionId, resolveCompanionId } from "./companions";
 import type {
   ExamInput,
   ExamUpdateInput,
   NoteInput,
   NoteUpdateInput,
   PokeDenData,
+  StudyActivityKind,
   StudySessionInput,
   StudySessionUpdateInput,
   SubjectInput,
@@ -26,6 +28,15 @@ import type {
   TaskInput,
   TaskUpdateInput,
 } from "./domain";
+import {
+  applyStudyReward,
+  createEmptyStudyProgress,
+  getCompanionLevel,
+  getDailyGoalRewardId,
+  getRewardId,
+  getRewardXp,
+  getStudyLevel,
+} from "./progression";
 
 export type PokeDenSetupUpdate = {
   currentStep?: number;
@@ -85,6 +96,7 @@ export type PokeDenActions = {
   recordExamResult: (examId: string, score: number, maxScore: number) => void;
   updateStudyPreferences: (update: StudyPreferencesUpdate) => void;
   updateCompanionPreferences: (update: CompanionPreferencesUpdate) => void;
+  evolveCompanion: (companionId: string) => void;
   completeSetup: (update: { studyPreferences: StudyPreferencesUpdate; setupCompleted?: boolean }) => void;
   saveOnboardingDraft: (update: {
     profile?: ProfileUpdate;
@@ -201,6 +213,48 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
       );
     };
 
+    const award = (
+      data: PokeDenData,
+      sourceId: string,
+      kind: StudyActivityKind,
+      minutes: number,
+      companionId: string | null,
+      completedAt: string,
+    ): PokeDenData => {
+      const id = kind === "daily-goal" ? sourceId : getRewardId(sourceId, kind);
+      return {
+        ...data,
+        studyProgress: applyStudyReward(data.studyProgress, {
+          id,
+          sourceId,
+          kind,
+          xp: getRewardXp(kind, minutes),
+          minutes,
+          companionId,
+          completedAt,
+        }),
+      };
+    };
+
+    const activeCompanion = (data: PokeDenData): CompanionId => resolveCompanionId(data.companionPreferences.selected);
+
+    const awardDailyGoal = (data: PokeDenData, completedAt: string, companionId: CompanionId): PokeDenData => {
+      const goal = data.studyPreferences.dailyGoalMinutes;
+      if (goal <= 0) return data;
+      const date = new Date(completedAt);
+      const rewardId = getDailyGoalRewardId(date);
+      if (data.studyProgress.rewards.some((reward) => reward.id === rewardId)) return data;
+      const minutes = data.focusSessions
+        .filter(
+          (session) =>
+            session.completed &&
+            (session.kind === "focus" || session.examTopicId !== null) &&
+            new Date(session.endedAt).toDateString() === date.toDateString(),
+        )
+        .reduce((sum, session) => sum + session.durationMinutes, 0);
+      return minutes >= goal ? award(data, rewardId, "daily-goal", minutes, companionId, completedAt) : data;
+    };
+
     return {
       updateSetup: (update) =>
         mutate((data) => ({
@@ -279,7 +333,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
             priority: input.priority ?? "medium",
             status: input.status ?? "todo",
             subtasks: input.subtasks ?? [],
-            completedAt: input.completedAt ?? (input.status === "completed" ? now : null),
+            completedAt: input.status === "completed" ? null : (input.completedAt ?? null),
             createdAt: now,
             updatedAt: now,
           };
@@ -291,22 +345,22 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         }),
 
       updateTask: (id, input) =>
-        mutate((data) => ({
-          ...data,
-          tasks: data.tasks.map((task) =>
-            task.id === id
-              ? {
-                  ...patch(task, input),
-                  completedAt:
-                    input.status === "completed"
-                      ? (task.completedAt ?? nowIso())
-                      : input.status === "todo" || input.status === "in-progress"
-                        ? null
-                        : task.completedAt,
-                }
-              : task,
-          ),
-        })),
+        mutate((data) => {
+          const previous = data.tasks.find((task) => task.id === id);
+          if (!previous) return data;
+          const completedAt = input.status === "completed" ? (previous.completedAt ?? nowIso()) : null;
+          const next = {
+            ...data,
+            tasks: data.tasks.map((task) =>
+              task.id === id
+                ? { ...patch(task, input), completedAt: input.status === undefined ? task.completedAt : completedAt }
+                : task,
+            ),
+          };
+          return previous.status !== "completed" && input.status === "completed"
+            ? award(next, id, "assignment", 0, activeCompanion(data), completedAt ?? nowIso())
+            : next;
+        }),
 
       deleteTask: (id) =>
         mutate((data) => ({
@@ -321,18 +375,19 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
 
       completeTask: (id) =>
         mutate((data) => {
+          const previous = data.tasks.find((task) => task.id === id);
+          if (!previous || previous.status === "completed") return data;
           const now = nowIso();
           const next = {
             ...data,
             tasks: data.tasks.map((item) =>
-              item.id === id && item.status !== "completed"
-                ? { ...item, status: "completed" as const, completedAt: now, updatedAt: now }
-                : item,
+              item.id === id ? { ...item, status: "completed" as const, completedAt: now, updatedAt: now } : item,
             ),
           };
-          const allDone = todayCompletedAll(next);
+          const rewarded = award(next, id, "assignment", 0, activeCompanion(data), now);
+          const allDone = todayCompletedAll(rewarded);
           return {
-            ...next,
+            ...rewarded,
             companionEvents: companionEvent(
               data,
               allDone ? "ALL_DAILY_TASKS_COMPLETED" : "TASK_COMPLETED",
@@ -376,12 +431,34 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         }),
 
       updateStudySession: (id, input) =>
-        mutate((data) => ({
-          ...data,
-          studySessions: data.studySessions.map((session) =>
-            session.id === id ? { ...patch(session, input), topic: input.topic ?? session.topic } : session,
-          ),
-        })),
+        mutate((data) => {
+          const previous = data.studySessions.find((session) => session.id === id);
+          if (!previous) return data;
+          const completedAt =
+            input.status === "completed"
+              ? (previous.completedAt ?? nowIso())
+              : input.status === undefined
+                ? previous.completedAt
+                : null;
+          const next = {
+            ...data,
+            studySessions: data.studySessions.map((session) =>
+              session.id === id
+                ? { ...patch(session, input), topic: input.topic ?? session.topic, completedAt }
+                : session,
+            ),
+          };
+          return previous.status !== "completed" && input.status === "completed"
+            ? award(
+                next,
+                id,
+                "planned-session",
+                previous.plannedMinutes,
+                activeCompanion(data),
+                completedAt ?? nowIso(),
+              )
+            : next;
+        }),
 
       deleteStudySession: (id) =>
         mutate((data) => ({
@@ -393,15 +470,31 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         })),
 
       completeStudySession: (id) =>
-        mutate((data) => ({
-          ...data,
-          studySessions: data.studySessions.map((session) =>
-            session.id === id && session.status !== "completed"
-              ? { ...session, status: "completed" as const, completedAt: nowIso(), updatedAt: nowIso() }
-              : session,
-          ),
-          companionEvents: companionEvent(data, "STUDY_PLAN_COMPLETED", "Planned session completed.", id),
-        })),
+        mutate((data) => {
+          const previous = data.studySessions.find((session) => session.id === id);
+          if (!previous || previous.status === "completed") return data;
+          const completedAt = nowIso();
+          const next = {
+            ...data,
+            studySessions: data.studySessions.map((session) =>
+              session.id === id
+                ? { ...session, status: "completed" as const, completedAt, updatedAt: completedAt }
+                : session,
+            ),
+          };
+          const rewarded = award(
+            next,
+            id,
+            "planned-session",
+            previous.plannedMinutes,
+            activeCompanion(data),
+            completedAt,
+          );
+          return {
+            ...rewarded,
+            companionEvents: companionEvent(data, "STUDY_PLAN_COMPLETED", "Planned session completed.", id),
+          };
+        }),
 
       startStudySession: (id) =>
         mutate((data) => {
@@ -562,8 +655,9 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
 
       completeTimer: () =>
         mutate((data) => {
-          if (!data.activeTimer) return data;
+          if (!data.activeTimer || data.activeTimer.status === "completed") return data;
           const timer = data.activeTimer;
+          const endedAt = nowIso();
           const elapsed =
             timer.accumulatedSeconds + Math.floor((Date.now() - new Date(timer.startedAt).getTime()) / 1000);
           const durationMinutes = Math.max(1, Math.round(elapsed / 60));
@@ -575,34 +669,48 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
             examId: timer.examId,
             examTopicId: timer.examTopicId,
             startedAt: timer.startedAt,
-            endedAt: nowIso(),
+            endedAt,
             durationMinutes,
             kind: timer.mode === "focus" ? "focus" : "review",
             note: "",
             completed: true,
           };
+          const topicWasUnreviewed =
+            timer.mode === "focus" &&
+            timer.examId !== null &&
+            timer.examTopicId !== null &&
+            data.exams
+              .find((exam) => exam.id === timer.examId)
+              ?.topics.some((topic) => topic.id === timer.examTopicId && topic.reviewedAt === null);
           const next = { ...data, focusSessions: [...data.focusSessions, focus] };
-          let exams = next.exams;
-          if (timer.examId && timer.examTopicId) {
-            exams = next.exams.map((exam) =>
-              exam.id === timer.examId
-                ? {
-                    ...exam,
-                    topics: exam.topics.map((topic) =>
-                      topic.id === timer.examTopicId && topic.reviewedAt === null
-                        ? { ...topic, reviewedAt: nowIso() }
-                        : topic,
-                    ),
-                    updatedAt: nowIso(),
-                  }
-                : exam,
-            );
+          const exams =
+            timer.examId && timer.examTopicId
+              ? next.exams.map((exam) =>
+                  exam.id === timer.examId
+                    ? {
+                        ...exam,
+                        topics: exam.topics.map((topic) =>
+                          topic.id === timer.examTopicId && topic.reviewedAt === null
+                            ? { ...topic, reviewedAt: endedAt }
+                            : topic,
+                        ),
+                        updatedAt: endedAt,
+                      }
+                    : exam,
+                )
+              : next.exams;
+          let rewarded: PokeDenData = { ...next, exams, activeTimer: { ...timer, status: "completed" } };
+          if (timer.mode === "focus") {
+            const companionId = activeCompanion(data);
+            rewarded = award(rewarded, focus.id, "pomodoro", durationMinutes, companionId, endedAt);
+            if (topicWasUnreviewed && timer.examTopicId) {
+              rewarded = award(rewarded, timer.examTopicId, "exam-topic-review", 0, companionId, endedAt);
+            }
+            rewarded = awardDailyGoal(rewarded, endedAt, companionId);
           }
           const ready = exams.find((exam) => exam.id === timer.examId);
           return {
-            ...next,
-            exams,
-            activeTimer: { ...timer, status: "completed" },
+            ...rewarded,
             companionEvents: companionEvent(
               data,
               ready && ready.topics.length > 0 && ready.topics.every((topic) => topic.reviewedAt !== null)
@@ -652,22 +760,27 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         })),
 
       toggleExamTopic: (examId, topicId) =>
-        mutate((data) => ({
-          ...data,
-          exams: data.exams.map((exam) =>
-            exam.id === examId
-              ? {
-                  ...exam,
-                  topics: exam.topics.map((topic) =>
-                    topic.id === topicId
-                      ? { ...topic, reviewedAt: topic.reviewedAt === null ? nowIso() : null, updatedAt: nowIso() }
-                      : topic,
-                  ),
-                  updatedAt: nowIso(),
-                }
-              : exam,
-          ),
-        })),
+        mutate((data) => {
+          const exam = data.exams.find((item) => item.id === examId);
+          const topic = exam?.topics.find((item) => item.id === topicId);
+          if (!exam || !topic) return data;
+          const reviewedAt = topic.reviewedAt === null ? nowIso() : null;
+          const next = {
+            ...data,
+            exams: data.exams.map((item) =>
+              item.id === examId
+                ? {
+                    ...item,
+                    topics: item.topics.map((current) =>
+                      current.id === topicId ? { ...current, reviewedAt, updatedAt: nowIso() } : current,
+                    ),
+                    updatedAt: nowIso(),
+                  }
+                : item,
+            ),
+          };
+          return reviewedAt ? award(next, topicId, "exam-topic-review", 0, activeCompanion(data), reviewedAt) : next;
+        }),
 
       planExamTopic: (examId, topicId, plannedStart) =>
         mutate((data) => {
@@ -710,6 +823,11 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         })),
 
       updateCompanionPreferences: (update) => {
+        const currentData = store.getState().data;
+        if (update.selected) {
+          const entry = COMPANION_CATALOG.find((item) => item.id === update.selected);
+          if (!entry || getStudyLevel(currentData.studyProgress.studyXp) < entry.unlockStudyLevel) return;
+        }
         mutate((data) => ({
           ...data,
           companionPreferences: { ...data.companionPreferences, ...update },
@@ -717,6 +835,32 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         const current = store.getState().data.companionPreferences;
         applyStampedAttributes({ ...current, ...update });
       },
+
+      evolveCompanion: (companionId) =>
+        mutate((data) => {
+          const entry = COMPANION_CATALOG.find((item) => item.id === companionId);
+          if (!entry || getStudyLevel(data.studyProgress.studyXp) < entry.unlockStudyLevel) return data;
+          const current = data.studyProgress.companions[companionId];
+          if (!current) return data;
+          const evolution = entry.evolutions?.[current.evolutionStage];
+          if (
+            !evolution ||
+            getCompanionLevel(current.companionXp) < evolution.companionLevel ||
+            getStudyLevel(data.studyProgress.studyXp) < evolution.studyLevel
+          ) {
+            return data;
+          }
+          return {
+            ...data,
+            studyProgress: {
+              ...data.studyProgress,
+              companions: {
+                ...data.studyProgress.companions,
+                [companionId]: { ...current, evolutionStage: current.evolutionStage + 1 },
+              },
+            },
+          };
+        }),
 
       completeSetup: (update) =>
         mutate((data) => ({
@@ -769,6 +913,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           exams: [],
           focusSessions: [],
           grades: [],
+          studyProgress: createEmptyStudyProgress(),
           activeTimer: null,
           updatedAt: nowIso(),
         };

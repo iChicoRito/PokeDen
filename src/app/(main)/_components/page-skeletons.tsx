@@ -141,6 +141,15 @@ export function ExamsSkeleton() {
   );
 }
 
+export function CompanionsSkeleton() {
+  return (
+    <PageSkeleton label="Loading companions">
+      <PageHeaderSkeleton />
+      <CardGridSkeleton count={3} cardHeight="h-[224px]" />
+    </PageSkeleton>
+  );
+}
+
 export function ExamDetailSkeleton() {
   return (
     <PageSkeleton maxWidth="max-w-4xl" label="Loading exam">

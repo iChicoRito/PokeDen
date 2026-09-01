@@ -76,7 +76,7 @@ export function PokeDenSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild size="sm">
-                <Link href="/settings">
+                <Link href="/companions">
                   <PawPrint aria-hidden="true" />
                   View companion
                 </Link>
