@@ -362,6 +362,13 @@ html[data-pokeden-reduced-motion="true"] [data-slot="skeleton"] {
   @apply rounded-xl border border-border transition-all focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50;
 }
 
+/* Pixel-art portraits: nearest-neighbor keeps the 32×32 companion profile
+ * PNGs crisp at integer scale factors (onboarding companion selection,
+ * Settings companion row). */
+.pokeden-pixelated {
+  image-rendering: pixelated;
+}
+
 /* Step enter/exit: tw-animate-css enter/exit keyframes. duration-300 drives
  * both directions. motion-reduce: variants cover prefers-reduced-motion; the
  * app-level opt-outs (data-pokeden-reduced-motion / companion-movement) are

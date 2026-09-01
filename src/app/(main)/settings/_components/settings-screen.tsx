@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { Flame, Leaf, RefreshCcw, RotateCcw, Trash2, Waves } from "lucide-react";
+import { Check, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/app/(main)/_components/page-header";
@@ -20,7 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -28,14 +28,10 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { COMPANIONS, resolveCompanionId } from "@/features/pokeden/companions";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
-
-const COMPANIONS = [
-  { id: "sprout", name: "Sprout", icon: Leaf, description: "Calm and encouraging" },
-  { id: "ember", name: "Ember", icon: Flame, description: "Cheerful and energetic" },
-  { id: "ripple", name: "Ripple", icon: Waves, description: "Focused and thoughtful" },
-] as const;
+import { cn } from "@/lib/utils";
 
 export function SettingsScreen() {
   const router = useRouter();
@@ -45,10 +41,20 @@ export function SettingsScreen() {
   const actions = usePokeDenStore((state) => state.actions);
   const { isPending, run } = usePendingAction();
 
-  const [profile, setProfile] = useState({ name: "", course: "", yearLevel: "", semester: "" });
+  const [profile, setProfile] = useState({ name: "", course: "" });
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmResetDemo, setConfirmResetDemo] = useState(false);
   const [confirmResetAll, setConfirmResetAll] = useState(false);
+  const hydratedOnceRef = useRef(false);
+
+  useEffect(() => {
+    if (!isHydrated || hydratedOnceRef.current) return;
+    hydratedOnceRef.current = true;
+    setProfile({
+      name: data.profile.name ?? "",
+      course: data.profile.course ?? "",
+    });
+  }, [data.profile.course, data.profile.name, isHydrated]);
 
   if (!isHydrated) return <SettingsSkeleton />;
 
@@ -65,8 +71,7 @@ export function SettingsScreen() {
         name: profile.name.trim(),
         displayName: profile.name.trim(),
         course: profile.course.trim(),
-        yearLevel: profile.yearLevel,
-        semester: profile.semester,
+        school: profile.course.trim(),
       });
       toast.success("Profile saved.");
     }).catch(() => toast.error("Could not save the profile."));
@@ -111,30 +116,12 @@ export function SettingsScreen() {
                   placeholder={data.profile.course}
                 />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="settings-year">Year Level</FieldLabel>
-                <Input
-                  id="settings-year"
-                  value={profile.yearLevel}
-                  onChange={(event) => setProfile({ ...profile, yearLevel: event.target.value })}
-                  placeholder={data.profile.yearLevel}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="settings-semester">Semester</FieldLabel>
-                <Input
-                  id="settings-semester"
-                  value={profile.semester}
-                  onChange={(event) => setProfile({ ...profile, semester: event.target.value })}
-                  placeholder={data.profile.semester}
-                />
-              </Field>
             </div>
             <div className="flex gap-2">
               <LoadingButton loading={isPending} loadingLabel="Saving…" onClick={saveProfile}>
                 Save profile
               </LoadingButton>
-              <Button variant="ghost" onClick={() => setProfile({ name: "", course: "", yearLevel: "", semester: "" })}>
+              <Button variant="ghost" onClick={() => setProfile({ name: "", course: "" })}>
                 Reset form
               </Button>
             </div>
@@ -236,36 +223,65 @@ export function SettingsScreen() {
         </CardHeader>
         <CardContent className="space-y-5">
           <RadioGroup
-            value={companion.selected}
+            value={resolveCompanionId(companion.selected)}
             onValueChange={(value) => {
               const item = COMPANIONS.find((c) => c.id === value) ?? COMPANIONS[0];
               actions.updateCompanionPreferences({
                 selected: item.id,
                 name: item.name,
-                personality: item.id === "sprout" ? "calm" : item.id === "ember" ? "cheerful" : "focused",
+                personality: item.personality,
               });
               toast.success(`${item.name} is your companion.`);
             }}
-            className="grid gap-3 sm:grid-cols-3"
+            className="grid gap-4 sm:grid-cols-3"
           >
-            {COMPANIONS.map((item) => (
-              <label
-                key={item.id}
-                htmlFor={`companion-${item.id}`}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-checked:border-primary"
-              >
-                <RadioGroupItem id={`companion-${item.id}`} value={item.id} className="sr-only" />
-                <Avatar>
-                  <AvatarFallback>
-                    <item.icon aria-hidden="true" />
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium text-sm">{item.name}</div>
-                  <div className="text-muted-foreground text-xs">{item.description}</div>
-                </div>
-              </label>
-            ))}
+            {COMPANIONS.map((item) => {
+              const selected = resolveCompanionId(companion.selected) === item.id;
+              return (
+                <Card
+                  key={item.id}
+                  size="sm"
+                  className={cn(
+                    "group/companion cursor-pointer transition-all focus-within:ring-3 focus-within:ring-ring/50",
+                    selected && "border-primary ring-2 ring-primary/20",
+                  )}
+                >
+                  <label
+                    htmlFor={`companion-${item.id}`}
+                    className="flex h-full cursor-pointer flex-col gap-(--card-spacing)"
+                  >
+                    <span className="sr-only">{item.name}</span>
+                    <span className="sr-only">
+                      <RadioGroupItem id={`companion-${item.id}`} value={item.id} />
+                    </span>
+                    <CardContent>
+                      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted/50">
+                        <span className={cn("block size-full", selected && "pokeden-companion-idle")}>
+                          <Image
+                            src={item.image}
+                            alt=""
+                            width={1000}
+                            height={1000}
+                            unoptimized
+                            className="pokeden-pixelated size-full object-cover"
+                          />
+                        </span>
+                        {selected ? (
+                          <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground">
+                            <Check className="size-4" aria-label="Selected" />
+                          </span>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                    <CardHeader>
+                      <CardTitle className="truncate">{item.name}</CardTitle>
+                      <CardDescription className="truncate">{item.description}</CardDescription>
+                      <CardDescription className="truncate">{item.tagline}</CardDescription>
+                    </CardHeader>
+                  </label>
+                </Card>
+              );
+            })}
           </RadioGroup>
           <div className="space-y-3">
             {(

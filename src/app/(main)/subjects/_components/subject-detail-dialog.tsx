@@ -192,10 +192,7 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
             <span className="break-words">{renderSubject.name}</span>
             {renderSubject.archivedAt ? <Badge variant="secondary">Archived</Badge> : <Badge>Active</Badge>}
           </DialogTitle>
-          <DialogDescription>
-            {renderSubject.code || "No code"}
-            {renderSubject.teacher ? ` · ${renderSubject.teacher}` : ""}
-          </DialogDescription>
+          <DialogDescription>Tasks, notes, study sessions, exams, and materials for this subject.</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">

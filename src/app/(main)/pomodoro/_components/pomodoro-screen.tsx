@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useRouter } from "next/navigation";
-
 import { Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,19 +9,16 @@ import { PageHeader } from "@/app/(main)/_components/page-header";
 import { PomodoroSkeleton } from "@/app/(main)/_components/page-skeletons";
 import { LoadingButton } from "@/components/loading-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  getActiveTimerElapsedSeconds,
-  getActiveTimerRemainingSeconds,
-  getDailyFocusMinutes,
-  getDailyFocusSessionCount,
-} from "@/features/pokeden/derivations";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getActiveTimerElapsedSeconds, getActiveTimerRemainingSeconds } from "@/features/pokeden/derivations";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
+import { cn } from "@/lib/utils";
+
+import { CompanionCanvas } from "./companion-canvas";
+import { CompanionDock } from "./companion-dock";
 
 type TimerMode = "focus" | "short-break" | "long-break";
 
@@ -33,26 +28,19 @@ function formatClock(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-type ModeClockProps = { mode: TimerMode; minutes: number; onStart: (mode: TimerMode) => void };
+function modeTagline(mode: TimerMode): string {
+  if (mode === "focus") return "Time to study.";
+  if (mode === "short-break") return "A short reset.";
+  return "A longer rest.";
+}
 
-function ModeClock({ mode, minutes, onStart }: ModeClockProps) {
-  return (
-    <Card className="w-full">
-      <CardContent className="flex flex-col items-center gap-4 py-8">
-        <div className="font-mono font-semibold text-6xl tabular-nums">{formatClock(minutes * 60)}</div>
-        <p className="text-muted-foreground text-sm">
-          {mode === "focus" ? "Time to study." : mode === "short-break" ? "A short reset." : "A longer rest."}
-        </p>
-        <Button size="lg" onClick={() => onStart(mode)}>
-          <Play /> Start {mode === "focus" ? "focus" : mode === "short-break" ? "short break" : "long break"}
-        </Button>
-      </CardContent>
-    </Card>
-  );
+function modeLabel(mode: TimerMode): string {
+  if (mode === "focus") return "Focus";
+  if (mode === "short-break") return "Short break";
+  return "Long break";
 }
 
 export function PomodoroScreen() {
-  const router = useRouter();
   const data = usePokeDenStore((state) => state.data);
   const isHydrated = usePokeDenStore((state) => state.isHydrated);
   const storageError = usePokeDenStore((state) => state.storageError);
@@ -60,6 +48,7 @@ export function PomodoroScreen() {
   const { run } = usePendingAction();
 
   const timer = data.activeTimer;
+  const companionVisible = data.companionPreferences.visible;
   const [now, setNow] = useState(() => new Date());
   const [selectedMode, setSelectedMode] = useState<TimerMode>(timer?.mode ?? "focus");
   const completionHandledRef = useRef(false);
@@ -191,30 +180,54 @@ export function PomodoroScreen() {
         </div>
       ) : null}
 
-      {timer ? (
-        <Card className="w-full overflow-hidden">
-          <CardHeader className="items-center gap-1 text-center">
-            <Badge variant="secondary" className="w-fit">
-              {timer.mode === "focus" ? "Focus" : timer.mode === "short-break" ? "Short break" : "Long break"}
-            </Badge>
-            <CardTitle className="text-xl">{subject?.name ?? "Unfocused session"}</CardTitle>
-            {task ? (
-              <CardDescription>Related task: {task.title}</CardDescription>
-            ) : (
-              <CardDescription>
-                {timer.status === "running" ? "Running" : timer.status === "paused" ? "Paused" : "Ready"}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-6">
-            <div className="relative grid size-64 place-items-center sm:size-72" aria-live="polite" aria-atomic="true">
-              <Progress
-                value={progress}
-                className="absolute inset-0 size-full rounded-full [&>div]:rounded-full"
-                aria-hidden="true"
-              />
-              <div className="relative text-center">
-                <div className="font-mono font-semibold text-5xl tabular-nums tracking-tight">
+      {!timer ? (
+        <Tabs
+          className="w-full gap-6"
+          value={selectedMode}
+          onValueChange={(value) => setSelectedMode(value as TimerMode)}
+        >
+          <TabsList className="self-center" aria-label="Timer mode">
+            <TabsTrigger value="focus">Focus</TabsTrigger>
+            <TabsTrigger value="short-break">Short break</TabsTrigger>
+            <TabsTrigger value="long-break">Long break</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      <Card className="relative min-h-[340px] w-full overflow-hidden border-primary/20 bg-gradient-to-b from-secondary/40 via-background to-background shadow-sm">
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-10 select-none border-primary/20 border-t bg-gradient-to-t from-secondary/50 via-secondary/25 to-transparent"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-10 z-0 h-1 select-none bg-primary/35 shadow-sm"
+          aria-hidden="true"
+        />
+        <CompanionCanvas />
+        <CardContent className={cn("relative z-10 flex flex-col items-center gap-6 py-10", timer ? "pb-24" : "pb-16")}>
+          {timer ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="w-fit">
+                  {modeLabel(timer.mode)}
+                </Badge>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold text-xl">{subject?.name ?? "Unfocused session"}</div>
+                {task ? (
+                  <div className="text-muted-foreground text-sm">Related task: {task.title}</div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    {timer.status === "running" ? "Running" : timer.status === "paused" ? "Paused" : "Ready"}
+                  </div>
+                )}
+              </div>
+              <div
+                className="rounded-2xl bg-card/70 px-6 py-2 text-center backdrop-blur-sm"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <div className="font-mono font-semibold text-6xl tabular-nums tracking-tight sm:text-7xl">
                   {formatClock(remaining)}
                 </div>
                 <div className="mt-1 min-h-5 text-muted-foreground text-sm" aria-live="polite">
@@ -231,138 +244,110 @@ export function PomodoroScreen() {
                   )}
                 </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {timer.status === "running" ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {timer.status === "running" ? (
+                  <LoadingButton
+                    size="lg"
+                    variant="outline"
+                    loading={pendingAction === "pause"}
+                    loadingLabel="Pausing…"
+                    onClick={pause}
+                  >
+                    <Pause /> Pause
+                  </LoadingButton>
+                ) : timer.status === "paused" ? (
+                  <LoadingButton
+                    size="lg"
+                    loading={pendingAction === "resume"}
+                    loadingLabel="Resuming…"
+                    onClick={resume}
+                  >
+                    <Play /> Resume
+                  </LoadingButton>
+                ) : (
+                  <LoadingButton
+                    size="lg"
+                    loading={pendingAction === `start-${selectedMode}`}
+                    loadingLabel="Starting…"
+                    onClick={() => start(selectedMode)}
+                  >
+                    <Play /> Start
+                  </LoadingButton>
+                )}
                 <LoadingButton
                   size="lg"
                   variant="outline"
-                  loading={pendingAction === "pause"}
-                  loadingLabel="Pausing…"
-                  onClick={pause}
+                  loading={pendingAction === "stop"}
+                  loadingLabel="Stopping…"
+                  onClick={stop}
                 >
-                  <Pause /> Pause
+                  <Square /> Stop
                 </LoadingButton>
-              ) : timer.status === "paused" ? (
-                <LoadingButton size="lg" loading={pendingAction === "resume"} loadingLabel="Resuming…" onClick={resume}>
-                  <Play /> Resume
-                </LoadingButton>
-              ) : (
                 <LoadingButton
                   size="lg"
-                  loading={pendingAction === `start-${selectedMode}`}
-                  loadingLabel="Starting…"
-                  onClick={() => start(selectedMode)}
+                  variant="ghost"
+                  loading={pendingAction === "reset"}
+                  loadingLabel="Resetting…"
+                  onClick={reset}
                 >
-                  <Play /> Start
+                  <RotateCcw /> Reset
                 </LoadingButton>
-              )}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <LoadingButton
+                  variant="outline"
+                  size="sm"
+                  loading={pendingAction === "start-short-break"}
+                  loadingLabel="Switching…"
+                  onClick={() => start("short-break")}
+                >
+                  <Coffee /> Short break
+                </LoadingButton>
+                <LoadingButton
+                  variant="outline"
+                  size="sm"
+                  loading={pendingAction === "start-long-break"}
+                  loadingLabel="Switching…"
+                  onClick={() => start("long-break")}
+                >
+                  <Coffee /> Long break
+                </LoadingButton>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className="rounded-2xl bg-card/70 px-6 py-2 text-center backdrop-blur-sm"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <div className="font-mono font-semibold text-6xl tabular-nums tracking-tight sm:text-7xl">
+                  {formatClock(defaults[selectedMode] * 60)}
+                </div>
+                <div className="mt-1 min-h-5 text-muted-foreground text-sm">{modeTagline(selectedMode)}</div>
+              </div>
               <LoadingButton
                 size="lg"
-                variant="outline"
-                loading={pendingAction === "stop"}
-                loadingLabel="Stopping…"
-                onClick={stop}
+                loading={pendingAction === `start-${selectedMode}`}
+                loadingLabel="Starting…"
+                onClick={() => start(selectedMode)}
               >
-                <Square /> Stop
+                <Play /> Start {modeLabel(selectedMode).toLowerCase()}
               </LoadingButton>
-              <LoadingButton
-                size="lg"
-                variant="ghost"
-                loading={pendingAction === "reset"}
-                loadingLabel="Resetting…"
-                onClick={reset}
-              >
-                <RotateCcw /> Reset
-              </LoadingButton>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <LoadingButton
-                variant="outline"
-                size="sm"
-                loading={pendingAction === "start-short-break"}
-                loadingLabel="Switching…"
-                onClick={() => start("short-break")}
-              >
-                <Coffee /> Short break
-              </LoadingButton>
-              <LoadingButton
-                variant="outline"
-                size="sm"
-                loading={pendingAction === "start-long-break"}
-                loadingLabel="Switching…"
-                onClick={() => start("long-break")}
-              >
-                <Coffee /> Long break
-              </LoadingButton>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs
-          className="w-full gap-6"
-          value={selectedMode}
-          onValueChange={(value) => setSelectedMode(value as TimerMode)}
-        >
-          <TabsList className="self-center" aria-label="Timer mode">
-            <TabsTrigger value="focus">Focus</TabsTrigger>
-            <TabsTrigger value="short-break">Short break</TabsTrigger>
-            <TabsTrigger value="long-break">Long break</TabsTrigger>
-          </TabsList>
-          <TabsContent value="focus">
-            <ModeClock mode="focus" minutes={defaults.focus} onStart={start} />
-          </TabsContent>
-          <TabsContent value="short-break">
-            <ModeClock mode="short-break" minutes={defaults["short-break"]} onStart={start} />
-          </TabsContent>
-          <TabsContent value="long-break">
-            <ModeClock mode="long-break" minutes={defaults["long-break"]} onStart={start} />
-          </TabsContent>
-        </Tabs>
-      )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="grid w-full gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Today's focus</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="font-semibold text-3xl tracking-tight">
-              {Math.floor(getDailyFocusMinutes(data, now) / 60)}h {getDailyFocusMinutes(data, now) % 60}m
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Sessions today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="font-semibold text-3xl tracking-tight">{getDailyFocusSessionCount(data, now)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Next session</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="font-semibold text-3xl tracking-tight">#{getDailyFocusSessionCount(data, now) + 1}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {data.companionPreferences.visible ? (
-        <Card className="w-full bg-muted/30">
-          <CardContent className="flex items-center justify-between gap-3 p-4">
-            <div className="min-w-0">
-              <div className="font-medium">{data.companionPreferences.name} is studying quietly</div>
-              <div className="text-muted-foreground text-xs">Companions never interrupt your focus.</div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => router.push("/settings")}>
-              Companion settings
-            </Button>
-          </CardContent>
-        </Card>
+      {timer ? (
+        <div className="flex w-full justify-center">
+          <div className="h-1 w-full max-w-3xl overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
       ) : null}
+
+      {companionVisible ? <CompanionDock /> : null}
     </div>
   );
 }

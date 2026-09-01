@@ -33,10 +33,7 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       name: "Alex Morgan",
       displayName: "Alex",
       school: "Pokademia Academy",
-      gradeLevel: "Year 11",
       course: "Computer Science",
-      yearLevel: "Year 11",
-      semester: "Semester 1",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       createdAt: subDays(now, 90).toISOString(),
       updatedAt: timestamp,
@@ -45,8 +42,6 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       {
         id: "subject-math",
         name: "Mathematics",
-        code: "MATH-11",
-        teacher: "Dr. Rivera",
         description: "Algebra, calculus foundations, and problem-solving practice.",
         color: "#6366f1",
         icon: "sigma",
@@ -72,8 +67,6 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       {
         id: "subject-biology",
         name: "Biology",
-        code: "BIO-11",
-        teacher: "Ms. Chen",
         description: "Cell biology, genetics, and laboratory work.",
         color: "#10b981",
         icon: "leaf",
@@ -103,8 +96,6 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       {
         id: "subject-history",
         name: "World History",
-        code: "HIST-10",
-        teacher: "Mr. Okafor",
         description: "Twentieth-century world history.",
         color: "#f59e0b",
         icon: "landmark",
@@ -349,8 +340,8 @@ export function createDemoPokeDenData(now = new Date()): PokeDenData {
       notifications: { tasks: true, classes: true, exams: true, focusReminders: true, companion: true },
     },
     companionPreferences: {
-      selected: "sprout",
-      name: "Sprout",
+      selected: "bulbasaur",
+      name: "Bulbasaur",
       personality: "calm",
       enabled: true,
       visible: true,

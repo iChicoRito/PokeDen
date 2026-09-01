@@ -112,7 +112,7 @@ Apply these checks to onboarding, Settings, Subjects, Tasks, Study Planner, Note
 - [ ] With setup incomplete, open PokeDen. **Expected:** four introduction screens lead into setup and the first screen presents Welcome, Get Started, and Skip clearly.
 - [ ] Complete the four screens using only Next/primary actions. **Expected:** Academic Organization, Plan It. Then Focus., and Meet Your Study Companion content appears in order and setup is reachable.
 - [ ] Use each allowed Skip action. **Expected:** optional setup can be skipped without trapping the user; the resulting completion state is saved consistently.
-- [ ] Enter name, course/program, year level, and semester. **Expected:** valid profile values save, persist, and appear in Settings for later editing.
+- [ ] Enter name and course/program. **Expected:** valid profile values save, persist, and appear in Settings for later editing.
 - [ ] Set focus, short-break, and long-break defaults during setup. **Expected:** values persist, appear in Settings, and become Pomodoro defaults.
 - [ ] Complete setup and reach Dashboard, then refresh/reopen. **Expected:** onboarding does not reappear while completion remains saved.
 - [ ] Leave setup incomplete and refresh. **Expected:** onboarding/setup remains available rather than incorrectly treating the user as complete.
@@ -332,9 +332,12 @@ Run all five once on mobile and desktop, in light and dark coverage across the s
 Addendum to the Phases 1–6 checklist above. Phase 7 replaces the linear 8-step wizard with a progressive, companion-first flow of ≤5 screens (Welcome → About you → Subjects → Companion → Focus rhythm). Every item is intentionally unchecked; the original onboarding items earlier in this checklist also remain pending manual execution.
 
 - [ ] Fresh start → complete the new flow in ≤5 screens. **Expected:** the whole flow fits in 5 screens or fewer, the step indicator always matches the current step and stays honest, and completion lands on the Dashboard.
-- [ ] Resume mid-wizard: refresh or close/reopen at every step. **Expected:** the flow returns to the exact step and every typed value is intact — name, course, year, semester, longBreakMinutes, and any in-progress subject draft.
+- [ ] Resume mid-wizard: refresh or close/reopen at every step. **Expected:** the flow returns to the exact step and every supported typed value is intact — name, course, longBreakMinutes, and any in-progress subject draft.
 - [ ] No data loss: type on the About-you screen, then refresh. **Expected:** the typed value persists (draft autosave); no field is wiped and the step does not restart.
-- [ ] Choose a companion (Ember or Ripple). **Expected:** the selection persists after refresh and the Settings companion radio shows the same companion selected.
+- [ ] Open About you with no saved profile values. **Expected:** “What’s your name?” starts empty and shows guidance as placeholder text; “What are you studying?” shows an example placeholder rather than a predefined value.
+- [ ] Inspect the text field on Step 3. **Expected:** it uses the same normalized default height and text sizing as the other onboarding text fields.
+- [ ] Select each companion on Step 4. **Expected:** the selection is clear within the companion choices and no separate “Preview:” card is shown.
+- [ ] Choose a companion (Charizard, Blastoise, or Bulbasaur). **Expected:** the selection persists after refresh and the Settings companion radio shows the same companion selected.
 - [ ] Enter out-of-range timer values (outside focus 5–180, short break 1–60, long break 1–120). **Expected:** values clamp to the schema bounds, an inline error explains the correction, and Complete setup still succeeds — no whole-form save failure and no storage-error brick.
 - [ ] Block localStorage (private mode or devtools storage block) and open PokeDen. **Expected:** the onboarding storage-error card appears with a "Continue in memory" path and a clear "Changes won't be saved" banner; the demo dashboard is never shown.
 - [ ] Revisit onboarding from Settings. **Expected:** the "Reviewing your setup" banner shows, Cancel returns to the Dashboard, the saved longBreakMinutes value is preserved, and saving creates no duplicate subject.

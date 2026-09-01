@@ -183,12 +183,10 @@ Explain that the companion can:
 
 ### Student Profile Setup
 
-Suggested fields:
+Current fields:
 
 - Name
 - Course / Program
-- Year Level
-- Current Semester
 
 ### Subject Setup
 
@@ -797,8 +795,6 @@ Allow students to control preferences that do not belong in study modules.
 
 - Name
 - Course / Program
-- Year Level
-- Semester
 
 #### Study Preferences
 

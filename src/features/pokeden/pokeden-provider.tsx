@@ -37,8 +37,6 @@ export type ProfileUpdate = Partial<{
   displayName: string;
   school: string;
   course: string;
-  yearLevel: string;
-  semester: string;
 }>;
 
 export type StudyPreferencesUpdate = Partial<PokeDenData["studyPreferences"]>;
@@ -223,8 +221,6 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           const subject = {
             id: input.id ?? newId("subject"),
             name: input.name,
-            code: input.code ?? "",
-            teacher: input.teacher ?? "",
             description: input.description ?? "",
             color: input.color ?? "#6366f1",
             icon: input.icon ?? "book-open",
@@ -764,10 +760,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
             name: "Student",
             displayName: "Student",
             school: "",
-            gradeLevel: "",
             course: "",
-            yearLevel: "",
-            semester: "",
           },
           subjects: [],
           tasks: [],

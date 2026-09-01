@@ -56,16 +56,12 @@ type ScheduleDraft = {
 
 type SubjectForm = {
   name: string;
-  code: string;
-  teacher: string;
   description: string;
   schedules: ScheduleDraft[];
 };
 
 const EMPTY_FORM: SubjectForm = {
   name: "",
-  code: "",
-  teacher: "",
   description: "",
   schedules: [],
 };
@@ -162,8 +158,6 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
     setEditing(subject);
     setForm({
       name: subject.name,
-      code: subject.code,
-      teacher: subject.teacher,
       description: subject.description,
       schedules: subject.classSchedules.map((schedule) => ({
         id: schedule.id,
@@ -196,8 +190,6 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
 
     const values = {
       name: form.name.trim(),
-      code: form.code.trim(),
-      teacher: form.teacher.trim(),
       description: form.description.trim(),
       classSchedules: form.schedules.map((schedule) => ({
         id: schedule.id,
@@ -301,25 +293,6 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
               />
             </Field>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="subject-code">Code</FieldLabel>
-                <Input
-                  id="subject-code"
-                  maxLength={30}
-                  value={form.code}
-                  onChange={(event) => setForm({ ...form, code: event.target.value })}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="subject-instructor">Instructor</FieldLabel>
-                <Input
-                  id="subject-instructor"
-                  value={form.teacher}
-                  onChange={(event) => setForm({ ...form, teacher: event.target.value })}
-                />
-              </Field>
-            </div>
             <div className="grid gap-3">
               <div className="flex items-start justify-between gap-3">
                 <div>

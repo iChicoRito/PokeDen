@@ -191,10 +191,13 @@ export function ProgressSkeleton() {
 
 export function PomodoroSkeleton() {
   return (
-    <PageSkeleton label="Loading focus timer" className="items-center">
+    <PageSkeleton label="Loading focus timer">
       <PageHeaderSkeleton width="w-80" />
-      <Skeleton className="size-72 rounded-full" />
-      <Skeleton className="h-10 w-64" />
+      <div className="flex justify-center">
+        <Skeleton className="h-8 w-64" />
+      </div>
+      <Skeleton className="h-96 w-full rounded-xl" />
+      <CardGridSkeleton count={3} cardHeight="h-28" />
     </PageSkeleton>
   );
 }

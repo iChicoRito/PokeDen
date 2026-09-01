@@ -2,57 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { ArrowLeft, Check, Clock3, Flame, Leaf, PartyPopper, Sparkles, Waves } from "lucide-react";
+import { ArrowLeft, Check, Clock3, PartyPopper, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { OnboardingSkeleton } from "@/app/(main)/_components/page-skeletons";
 import { LoadingButton } from "@/components/loading-button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { COMPANIONS, type CompanionId, DEFAULT_COMPANION, resolveCompanionId } from "@/features/pokeden/companions";
 import type { PokeDenData } from "@/features/pokeden/domain";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
-
-const COMPANIONS = [
-  {
-    id: "sprout",
-    name: "Sprout",
-    description: "Calm and encouraging",
-    tagline: "Softly green, steady as a leaf.",
-    icon: Leaf,
-  },
-  {
-    id: "ember",
-    name: "Ember",
-    description: "Cheerful and energetic",
-    tagline: "Warm, bright, and ready to go.",
-    icon: Flame,
-  },
-  {
-    id: "ripple",
-    name: "Ripple",
-    description: "Focused and thoughtful",
-    tagline: "Quiet water, deep focus.",
-    icon: Waves,
-  },
-] as const;
-
-type CompanionId = (typeof COMPANIONS)[number]["id"];
+import { cn } from "@/lib/utils";
 
 type StepId = "welcome" | "about-you" | "subjects" | "companion" | "focus" | "completion";
 
 // Progressive profile questions — one per screen inside the about-you step.
-type ProfileQuestion = "name" | "course" | "year" | "semester";
-
-const YEAR_OPTIONS = ["Year 1", "Year 2", "Year 3", "Year 4", "Graduate"] as const;
-const SEMESTER_OPTIONS = ["Semester 1", "Semester 2", "Summer"] as const;
+type ProfileQuestion = "name" | "course";
 
 const STEP_LABELS: Array<{ id: StepId; label: string }> = [
   { id: "welcome", label: "Your den" },
@@ -73,12 +46,6 @@ function mapLegacyStep(step: number): StepId {
   if (step >= 7) return "focus";
   return "welcome";
 }
-
-const PERSONALITY: Record<CompanionId, "calm" | "cheerful" | "focused"> = {
-  sprout: "calm",
-  ember: "cheerful",
-  ripple: "focused",
-};
 
 function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min;
@@ -101,10 +68,8 @@ export function OnboardingFlow() {
   const [question, setQuestion] = useState<ProfileQuestion>("name");
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
-  const [year, setYear] = useState("");
-  const [semester, setSemester] = useState("");
-  const [subject, setSubject] = useState({ name: "", code: "", teacher: "" });
-  const [companion, setCompanion] = useState<CompanionId>("sprout");
+  const [subjectName, setSubjectName] = useState("");
+  const [companion, setCompanion] = useState<CompanionId>(DEFAULT_COMPANION);
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [shortBreakMinutes, setShortBreakMinutes] = useState(5);
   const [longBreakMinutes, setLongBreakMinutes] = useState(15);
@@ -136,17 +101,15 @@ export function OnboardingFlow() {
 
   // Restore saved values from the store — only once, when hydration completes,
   // so in-progress edits are never wiped by later store changes.
-  const initialDataRef = useRef<PokeDenData | null>(null);
-  initialDataRef.current ??= data;
+  const initialDataRef = useRef<PokeDenData>(data);
   useEffect(() => {
     if (!isHydrated) return;
-    // Non-null: initialDataRef is populated on every render before effects run.
-    const snapshot = initialDataRef.current!;
-    setName(snapshot.profile.name ?? "");
+    const snapshot = initialDataRef.current;
+    const restoredName = snapshot.profile.name ?? "";
+    const isPristineStart = !snapshot.setupCompleted && snapshot.onboardingStep <= 0;
+    setName(isPristineStart && restoredName === "Student" ? "" : restoredName);
     setCourse(snapshot.profile.school ?? snapshot.profile.course ?? "");
-    setYear(snapshot.profile.yearLevel ?? snapshot.profile.gradeLevel ?? "");
-    setSemester(snapshot.profile.semester ?? "");
-    setCompanion((snapshot.companionPreferences.selected.toLowerCase() as CompanionId) || "sprout");
+    setCompanion(resolveCompanionId(snapshot.companionPreferences.selected));
     setFocusMinutes(snapshot.studyPreferences.defaultFocusMinutes);
     setShortBreakMinutes(snapshot.studyPreferences.defaultBreakMinutes);
     setLongBreakMinutes(snapshot.studyPreferences.longBreakMinutes);
@@ -164,19 +127,21 @@ export function OnboardingFlow() {
     if (!isHydrated) return;
     const timer = setTimeout(() => {
       if (!canPersist) return;
-      actions.saveOnboardingDraft({
-        profile: {
-          name: name.trim() || undefined,
-          displayName: name.trim() || undefined,
-          school: course.trim() || undefined,
-          course: course.trim() || undefined,
-          yearLevel: year || undefined,
-          semester: semester || undefined,
-        },
-      });
+      // Only include filled fields: undefined values would override required
+      // schema strings when patched and fail validation on blank profiles.
+      const draft: { name?: string; displayName?: string; school?: string; course?: string } = {};
+      if (name.trim()) {
+        draft.name = name.trim();
+        draft.displayName = name.trim();
+      }
+      if (course.trim()) {
+        draft.school = course.trim();
+        draft.course = course.trim();
+      }
+      actions.saveOnboardingDraft({ profile: draft });
     }, 600);
     return () => clearTimeout(timer);
-  }, [name, course, year, semester, isHydrated, canPersist, actions]);
+  }, [name, course, isHydrated, canPersist, actions]);
 
   // Debounced autosave of timer fields.
   useEffect(() => {
@@ -203,11 +168,9 @@ export function OnboardingFlow() {
   const questionFields: Record<ProfileQuestion, { label: string; value: string }> = {
     name: { label: "What's your name?", value: name },
     course: { label: "What are you studying?", value: course },
-    year: { label: "What year are you in?", value: year },
-    semester: { label: "Which semester is it?", value: semester },
   };
 
-  const questionOrder: ProfileQuestion[] = ["name", "course", "year", "semester"];
+  const questionOrder: ProfileQuestion[] = ["name", "course"];
   const questionIndex = questionOrder.indexOf(question);
 
   const advanceQuestion = () => {
@@ -229,8 +192,6 @@ export function OnboardingFlow() {
             displayName: name.trim(),
             school: course.trim(),
             course: course.trim(),
-            yearLevel: year,
-            semester,
           });
           moveTo("subjects");
         }
@@ -245,14 +206,12 @@ export function OnboardingFlow() {
       displayName: name.trim() || "Student",
       school: course.trim(),
       course: course.trim(),
-      yearLevel: year,
-      semester,
     });
     moveTo("subjects");
   };
 
   const saveSubject = () => {
-    const trimmedName = subject.name.trim();
+    const trimmedName = subjectName.trim();
     if (!trimmedName) {
       setTouched((current) => ({ ...current, subjectName: true }));
       return;
@@ -262,8 +221,6 @@ export function OnboardingFlow() {
       if (!exists) {
         actions.createSubject({
           name: trimmedName,
-          code: subject.code.trim(),
-          teacher: subject.teacher.trim(),
           color: "#22c55e",
           icon: "book-open",
         });
@@ -279,7 +236,7 @@ export function OnboardingFlow() {
       actions.updateCompanionPreferences({
         enabled: true,
         name: selected.name,
-        personality: PERSONALITY[selected.id],
+        personality: selected.personality,
         selected: selected.id,
       });
       moveTo("focus");
@@ -454,78 +411,38 @@ export function OnboardingFlow() {
               <h2 ref={headingRef} tabIndex={-1} className="font-heading text-xl leading-snug font-medium outline-none">
                 {questionFields[question].label}
               </h2>
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                Question {questionIndex + 1} of {questionOrder.length} — skip any question you’d rather answer later.
-              </p>
             </div>
             <div>
-              {question === "name" || question === "course" ? (
-                <Field data-invalid={Boolean(touched[question])}>
-                  <FieldLabel htmlFor={`profile-${question}`} className="sr-only">
-                    {questionFields[question].label}
-                  </FieldLabel>
-                  <Input
-                    id={`profile-${question}`}
-                    value={questionFields[question].value}
-                    autoComplete={question === "name" ? "name" : "organization"}
-                    aria-invalid={Boolean(touched[question])}
-                    aria-describedby={touched[question] ? `profile-${question}-error` : undefined}
-                    className="h-11 text-base"
-                    onChange={(event) => {
-                      if (question === "name") setName(event.target.value);
-                      else setCourse(event.target.value);
-                      setTouched((current) => ({ ...current, [question]: false }));
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        advanceQuestion();
-                      }
-                    }}
-                  />
-                  {touched[question] ? (
-                    <FieldError id={`profile-${question}-error`}>
-                      {question === "name" ? "Please tell us your name." : "Please tell us what you’re studying."}
-                    </FieldError>
-                  ) : null}
-                </Field>
-              ) : question === "year" ? (
-                <Field>
-                  <FieldLabel htmlFor="profile-year" className="sr-only">
-                    Year level
-                  </FieldLabel>
-                  <Select value={year} onValueChange={(value) => value && setYear(value)}>
-                    <SelectTrigger id="profile-year" className="h-11 w-full">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {YEAR_OPTIONS.map((item) => (
-                        <SelectItem key={item} value={item}>
-                          {item}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              ) : (
-                <Field>
-                  <FieldLabel htmlFor="profile-semester" className="sr-only">
-                    Semester
-                  </FieldLabel>
-                  <Select value={semester} onValueChange={(value) => value && setSemester(value)}>
-                    <SelectTrigger id="profile-semester" className="h-11 w-full">
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEMESTER_OPTIONS.map((item) => (
-                        <SelectItem key={item} value={item}>
-                          {item}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
+              <Field data-invalid={Boolean(touched[question])}>
+                <FieldLabel htmlFor={`profile-${question}`} className="sr-only">
+                  {questionFields[question].label}
+                </FieldLabel>
+                <Input
+                  id={`profile-${question}`}
+                  value={questionFields[question].value}
+                  autoComplete={question === "name" ? "name" : "organization"}
+                  aria-invalid={Boolean(touched[question])}
+                  aria-describedby={touched[question] ? `profile-${question}-error` : undefined}
+                  className="h-11 text-base"
+                  placeholder={question === "name" ? "e.g. Alex Morgan" : "e.g. Computer Science"}
+                  onChange={(event) => {
+                    if (question === "name") setName(event.target.value);
+                    else setCourse(event.target.value);
+                    setTouched((current) => ({ ...current, [question]: false }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      advanceQuestion();
+                    }
+                  }}
+                />
+                {touched[question] ? (
+                  <FieldError id={`profile-${question}-error`}>
+                    {question === "name" ? "Please tell us your name." : "Please tell us what you’re studying."}
+                  </FieldError>
+                ) : null}
+              </Field>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex gap-3">
@@ -561,13 +478,14 @@ export function OnboardingFlow() {
                   <FieldLabel htmlFor="subject-name">Subject name</FieldLabel>
                   <Input
                     id="subject-name"
-                    value={subject.name}
+                    value={subjectName}
                     autoComplete="off"
                     aria-invalid={Boolean(touched.subjectName)}
                     aria-describedby={touched.subjectName ? "subject-name-error" : undefined}
+                    className="h-11 text-base"
                     placeholder="e.g. Applied Mathematics"
                     onChange={(event) => {
-                      setSubject({ ...subject, name: event.target.value });
+                      setSubjectName(event.target.value);
                       setTouched((current) => ({ ...current, subjectName: false }));
                     }}
                     onKeyDown={(event) => {
@@ -581,30 +499,10 @@ export function OnboardingFlow() {
                     <FieldError id="subject-name-error">Only a subject name is required.</FieldError>
                   ) : (
                     <FieldDescription>
-                      Only the subject name is required — code and instructor are optional.
+                      Give your subject a name — you can fine-tune schedules and details later.
                     </FieldDescription>
                   )}
                 </Field>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="subject-code">Subject code (optional)</FieldLabel>
-                    <Input
-                      id="subject-code"
-                      value={subject.code}
-                      autoComplete="off"
-                      onChange={(event) => setSubject({ ...subject, code: event.target.value })}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="instructor">Instructor (optional)</FieldLabel>
-                    <Input
-                      id="instructor"
-                      value={subject.teacher}
-                      autoComplete="off"
-                      onChange={(event) => setSubject({ ...subject, teacher: event.target.value })}
-                    />
-                  </Field>
-                </div>
               </FieldGroup>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -622,13 +520,13 @@ export function OnboardingFlow() {
             </div>
           </section>
         ) : step === "companion" ? (
-          <section className="pokeden-step-enter space-y-8">
+          <section className="pokeden-step-enter space-y-5">
             <div className="space-y-3">
               <h2 ref={headingRef} tabIndex={-1} className="font-heading text-xl leading-snug font-medium outline-none">
                 Choose your companion
               </h2>
               <p className="text-sm text-muted-foreground">
-                Original, abstract friends designed to support your study rhythm.
+                Pick the partner that fits your study rhythm — you can change it later in Settings.
               </p>
             </div>
             <div>
@@ -640,38 +538,51 @@ export function OnboardingFlow() {
                 {COMPANIONS.map((item) => {
                   const selected = companion === item.id;
                   return (
-                    <div key={item.id} className={`pokeden-card-ring p-1.5 ${selected ? "border-primary" : ""}`}>
+                    <Card
+                      key={item.id}
+                      size="sm"
+                      className={cn(
+                        "group/companion cursor-pointer transition-all focus-within:ring-3 focus-within:ring-ring/50",
+                        selected && "border-primary ring-2 ring-primary/20",
+                      )}
+                    >
                       <label
                         htmlFor={`companion-${item.id}`}
-                        className="flex h-full cursor-pointer flex-col items-center gap-3 rounded-lg p-4 text-center"
+                        className="flex h-full cursor-pointer flex-col gap-(--card-spacing)"
                       >
                         <span className="sr-only">{item.name}</span>
-                        <RadioGroupItem id={`companion-${item.id}`} value={item.id} className="sr-only" />
-                        <span className="flex items-center justify-center py-1">
-                          <span className={selected ? "pokeden-companion-idle" : ""}>
-                            <Avatar className="size-14">
-                              <AvatarFallback className="bg-primary/15 text-primary">
-                                <item.icon className="size-7" aria-hidden="true" />
-                              </AvatarFallback>
-                            </Avatar>
-                          </span>
+                        <span className="sr-only">
+                          <RadioGroupItem id={`companion-${item.id}`} value={item.id} />
                         </span>
-                        <span className="flex items-center gap-1.5 font-semibold">
-                          {item.name}
-                          {selected ? <Check className="size-4 text-primary" aria-label="Selected" /> : null}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{item.description}</span>
-                        <span className="text-xs text-muted-foreground">{item.tagline}</span>
+                        <CardContent>
+                          <div className="relative aspect-square overflow-hidden rounded-lg bg-muted/50">
+                            <span className={cn("block size-full", selected && "pokeden-companion-idle")}>
+                              <Image
+                                src={item.image}
+                                alt=""
+                                width={1000}
+                                height={1000}
+                                unoptimized
+                                className="pokeden-pixelated size-full object-cover"
+                              />
+                            </span>
+                            {selected ? (
+                              <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground">
+                                <Check className="size-4" aria-label="Selected" />
+                              </span>
+                            ) : null}
+                          </div>
+                        </CardContent>
+                        <CardHeader>
+                          <CardTitle className="truncate">{item.name}</CardTitle>
+                          <CardDescription className="truncate">{item.description}</CardDescription>
+                          <CardDescription className="truncate">{item.tagline}</CardDescription>
+                        </CardHeader>
                       </label>
-                    </div>
+                    </Card>
                   );
                 })}
               </RadioGroup>
-              <div className="mt-4 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Preview:</span>{" "}
-                {COMPANIONS.find((item) => item.id === companion)?.description}. Your companion will bob gently while
-                idle and settle in to study during focus time.
-              </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Button variant="ghost" onClick={() => moveTo("subjects")}>
