@@ -1,6 +1,6 @@
 // Single source of truth for the study-companion catalog (T-07).
 // Consumed by the onboarding companion step and the Settings companion card.
-export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "snorlax" | "wigglypuff";
+export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "snorlax" | "wigglypuff" | "pikachu";
 
 export type CompanionEntry = {
   id: CompanionId;
@@ -82,6 +82,15 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     tagline: "A little spooky, a lot of fun.",
     personality: "cheerful",
     image: "/assets/profiles/gengar-profile.png",
+    unlockStudyLevel: 2,
+  },
+  {
+    id: "pikachu",
+    name: "Pikachu",
+    description: "Bright and loyal",
+    tagline: "A spark that keeps you going.",
+    personality: "cheerful",
+    image: "/assets/profiles/pickachu-profile.png",
     unlockStudyLevel: 2,
   },
   {
