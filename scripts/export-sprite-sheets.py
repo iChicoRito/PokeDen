@@ -306,7 +306,10 @@ def generate_module(entries: list[dict]) -> str:
     lines.append("import type { CompanionId } from \"@/features/pokeden/companions\";")
     lines.append("")
     species_ids = [entry["species"] for entry in entries]
-    lines.append("export type SpriteSpecies = " + " | ".join(f'\"{sid}\"' for sid in species_ids) + ";")
+    lines.append("export type SpriteSpecies =")
+    for index, sid in enumerate(species_ids):
+        suffix = ";" if index == len(species_ids) - 1 else ""
+        lines.append(f'  | "{sid}"{suffix}')
     lines.append("")
     lines.append(
         'export type SpriteStateName = "idle-left" | "idle-right" | "walking-left" | "walking-right";'
