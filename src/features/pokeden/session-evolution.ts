@@ -20,13 +20,13 @@ export const SESSION_BASE_SPECIES: Record<CompanionId, SpriteSpecies> = {
 // exported yet (see public/assets/sprites/*/*.aseprite without a matching
 // *-sheet.png) are intentionally absent: lookup falls back to the base species.
 export const SESSION_EVOLUTION_SPECIES: Record<CompanionId, readonly SpriteSpecies[]> = {
-  blastoise: ["squirtle"],
-  bulbasaur: ["bulbasaur"],
-  charizard: ["charmander"],
-  gengar: ["gastly"],
+  blastoise: ["squirtle", "wartortle"],
+  bulbasaur: ["bulbasaur", "ivysaur"],
+  charizard: ["charmander", "charmeleon", "charizard"],
+  gengar: ["gastly", "haunter"],
   snorlax: ["munchlax"],
-  wigglypuff: ["jigglypuff"],
-  pikachu: ["pikachu"],
+  wigglypuff: ["jigglypuff", "wigglytuff"],
+  pikachu: ["pikachu", "raichu"],
 };
 
 export type SessionPhase = 0 | 1 | 2;

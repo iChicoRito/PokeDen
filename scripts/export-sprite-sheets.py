@@ -33,15 +33,37 @@ FRAME_HEIGHT = 28
 FRAME_RGBA_BYTES = FRAME_WIDTH * FRAME_HEIGHT * 4
 
 # folder -> (species id, display name, source stem)
+# NOTE: bulbasaur/ivysaur.aseprite holds Bulbasaur art and bulbasaur/bulbasaur.aseprite
+# holds Ivysaur art (verified visually 2026-09-04) — the crossed stems below are
+# intentional, do not "fix" them.
 SPECIES = [
     ("blastoise", "squirtle", "Squirtle", "squirtle"),
+    ("blastoise", "wartortle", "Wartortle", "wartortle"),
+    # NOTE: blastoise/blastoise.aseprite holds Wartortle art (visually verified
+    # 2026-09-04: feather ears, no shell cannons), so it is intentionally NOT
+    # exported — the blastoise companion's phase-2 is the wartortle sheet above.
     ("bulbasaur", "bulbasaur", "Bulbasaur", "ivysaur"),
+    # NOTE: bulbasaur/bulbasaur.aseprite holds Ivysaur art (verified 2026-09-04),
+    # so the bulbasaur companion's phase-2 is the ivysaur sheet below.
+    ("bulbasaur", "ivysaur", "Ivysaur", "bulbasaur"),
+    # NOTE: bulbasaur/venosaur.aseprite holds Ivysaur art in all 20 frames
+    # (verified 2026-09-04) — no Venusaur art exists, so no phase-3 export.
     ("charizard", "charmander", "Charmander", "charmander"),
+    ("charizard", "charmeleon", "Charmeleon", "charmeleon"),
+    ("charizard", "charizard", "Charizard", "charizard"),
     ("gengar", "gastly", "Gastly", "gastly"),
+    ("gengar", "haunter", "Haunter", "haunter"),
+    # NOTE: snorlax/snorlax.aseprite holds Munchlax art in all 15 frames and has a
+    # duplicate walk-down tag that fails the exporter's uniqueness check
+    # (verified 2026-09-04) — no Snorlax art exists, so no phase-2 export.
     ("snorlax", "munchlax", "Munchlax", "munchlax"),
+    # NOTE: wigglypuff/wigglypuff.aseprite holds Wigglytuff art (verified 2026-09-04).
     ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
+    ("wigglypuff", "wigglytuff", "Wigglytuff", "wigglypuff"),
     ("totodile", "totodile", "Totodile", "totodile"),
+    # NOTE: pickachu/raichu.aseprite holds Raichu art (verified 2026-09-04).
     ("pickachu", "pikachu", "Pikachu", "pickachu"),
+    ("pickachu", "raichu", "Raichu", "raichu"),
 ]
 
 # Normalize the typos present in the source tags.
