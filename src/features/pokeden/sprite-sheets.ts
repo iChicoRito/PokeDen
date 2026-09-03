@@ -3,13 +3,20 @@ import type { CompanionId } from "@/features/pokeden/companions";
 
 export type SpriteSpecies =
   | "squirtle"
+  | "wartortle"
   | "bulbasaur"
+  | "ivysaur"
   | "charmander"
+  | "charmeleon"
+  | "charizard"
   | "gastly"
+  | "haunter"
   | "munchlax"
   | "jigglypuff"
+  | "wigglytuff"
   | "totodile"
-  | "pikachu";
+  | "pikachu"
+  | "raichu";
 
 export type SpriteStateName = "idle-left" | "idle-right" | "walking-left" | "walking-right";
 
@@ -42,6 +49,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  wartortle: {
+    species: "wartortle",
+    displayName: "Wartortle",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/blastoise/wartortle-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
   bulbasaur: {
     species: "bulbasaur",
     displayName: "Bulbasaur",
@@ -55,6 +77,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "idle-right": { from: 1, to: 1 },
       "walking-left": { from: 2, to: 5 },
       "walking-right": { from: 6, to: 9 },
+    },
+  },
+  ivysaur: {
+    species: "ivysaur",
+    displayName: "Ivysaur",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/bulbasaur/ivysaur-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 10,
+    states: {
+      "idle-left": { from: 0, to: 0 },
+      "idle-right": { from: 1, to: 1 },
+      "walking-left": { from: 6, to: 9 },
+      "walking-right": { from: 2, to: 5 },
     },
   },
   charmander: {
@@ -72,11 +109,56 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  charmeleon: {
+    species: "charmeleon",
+    displayName: "Charmeleon",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/charizard/charmeleon-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  charizard: {
+    species: "charizard",
+    displayName: "Charizard",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/charizard/charizard-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
   gastly: {
     species: "gastly",
     displayName: "Gastly",
     gender: "♂",
     sheetUrl: "/assets/sprites/gengar/gastly-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  haunter: {
+    species: "haunter",
+    displayName: "Haunter",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/gengar/haunter-sheet.png",
     frameWidth: 28,
     frameHeight: 28,
     frameCount: 5,
@@ -117,6 +199,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  wigglytuff: {
+    species: "wigglytuff",
+    displayName: "Wigglytuff",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/wigglypuff/wigglytuff-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
   totodile: {
     species: "totodile",
     displayName: "Totodile",
@@ -137,6 +234,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
     displayName: "Pikachu",
     gender: "♂",
     sheetUrl: "/assets/sprites/pickachu/pikachu-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  raichu: {
+    species: "raichu",
+    displayName: "Raichu",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/pickachu/raichu-sheet.png",
     frameWidth: 28,
     frameHeight: 28,
     frameCount: 5,
