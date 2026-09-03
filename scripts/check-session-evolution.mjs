@@ -1,7 +1,7 @@
 // T-15 contract checks for session-evolution.ts (Node built-in runner, no deps).
 // Mirrors the pure thresholds so logic regressions fail loudly.
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 const P1 = 0.6;
 const P2 = 0.3;
