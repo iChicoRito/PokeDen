@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { PawPrint, Sparkles } from "lucide-react";
@@ -14,18 +15,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
-import { resolveCompanionId } from "@/features/pokeden/companions";
+import { COMPANION_CATALOG, resolveCompanionId } from "@/features/pokeden/companions";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
-import { FIRST_EVOLUTION_BY_COMPANION, SPRITE_SHEETS } from "@/features/pokeden/sprite-sheets";
 
+import { CompanionLevelMeter } from "./companion-level-meter";
 import { PokeDenNav } from "./pokeden-nav";
 
 export function PokeDenSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const companionPreferences = usePokeDenStore((state) => state.data.companionPreferences);
   const companionId = resolveCompanionId(companionPreferences.selected);
-  const companionSheet = SPRITE_SHEETS[FIRST_EVOLUTION_BY_COMPANION[companionId]];
-  // Frame 0 of the sheet is a horizontal idle pose; rendered at 2x scale for a crisp pixel portrait.
-  const companionFrameSize = companionSheet.frameWidth * 2;
+  const entry = COMPANION_CATALOG.find((candidate) => candidate.id === companionId) ?? COMPANION_CATALOG[0];
 
   return (
     <Sidebar {...props}>
@@ -53,26 +52,27 @@ export function PokeDenSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <div className="rounded-lg border bg-sidebar-accent/40 p-2 group-data-[collapsible=icon]:hidden">
           <div className="flex items-center gap-2 px-1 pb-2">
             {companionPreferences.visible ? (
-              <div
-                aria-hidden="true"
-                className="pokeden-pixelated size-10 shrink-0 rounded-md bg-sidebar-accent"
-                style={{
-                  backgroundImage: `url(${companionSheet.sheetUrl})`,
-                  backgroundSize: `${companionSheet.frameCount * companionFrameSize}px ${companionSheet.frameHeight * 2}px`,
-                  backgroundPosition: "0 0",
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
+              <div className="size-10 shrink-0 overflow-hidden rounded-md bg-sidebar-accent">
+                <Image
+                  src={entry.image}
+                  alt={`${entry.name} profile`}
+                  width={96}
+                  height={96}
+                  unoptimized
+                  className="pokeden-pixelated size-full rounded-md object-cover"
+                />
+              </div>
             ) : (
               <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-accent">
                 <PawPrint aria-hidden="true" className="size-4 text-muted-foreground" />
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-xs">Companion dock</p>
               <p className="truncate text-muted-foreground text-xs">Your companion is ready and studying with you.</p>
             </div>
           </div>
+          <CompanionLevelMeter />
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild size="sm">

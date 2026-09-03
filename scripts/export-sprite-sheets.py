@@ -38,7 +38,6 @@ SPECIES = [
     ("bulbasaur", "bulbasaur", "Bulbasaur", "ivysaur"),
     ("charizard", "charmander", "Charmander", "charmander"),
     ("gengar", "gastly", "Gastly", "gastly"),
-    ("prinplup", "piplup", "Piplup", "piplup"),
     ("snorlax", "munchlax", "Munchlax", "munchlax"),
     ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
 ]
@@ -352,7 +351,6 @@ def generate_module(entries: list[dict]) -> str:
         ("bulbasaur", "bulbasaur"),
         ("charizard", "charmander"),
         ("gengar", "gastly"),
-        ("prinplup", "piplup"),
         ("snorlax", "munchlax"),
         ("wigglypuff", "jigglypuff"),
     ]:

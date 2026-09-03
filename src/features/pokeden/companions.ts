@@ -1,6 +1,6 @@
 // Single source of truth for the study-companion catalog (T-07).
 // Consumed by the onboarding companion step and the Settings companion card.
-export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "prinplup" | "snorlax" | "wigglypuff";
+export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "snorlax" | "wigglypuff";
 
 export type CompanionEntry = {
   id: CompanionId;
@@ -85,22 +85,13 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     unlockStudyLevel: 2,
   },
   {
-    id: "prinplup",
-    name: "Piplup",
-    description: "Proud and determined",
-    tagline: "Small steps, strong spirit.",
-    personality: "focused",
-    image: "/assets/sprites/prinplup/piplup-sheet.png",
-    unlockStudyLevel: 3,
-  },
-  {
     id: "snorlax",
     name: "Munchlax",
     description: "Relaxed and dependable",
     tagline: "Take a breath, then keep going.",
     personality: "calm",
     image: "/assets/profiles/snorlax-profile.png",
-    unlockStudyLevel: 4,
+    unlockStudyLevel: 3,
   },
   {
     id: "wigglypuff",
@@ -109,7 +100,7 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     tagline: "A soft song for every study session.",
     personality: "cheerful",
     image: "/assets/profiles/wigglypuff-profile.png",
-    unlockStudyLevel: 5,
+    unlockStudyLevel: 4,
   },
 ];
 
