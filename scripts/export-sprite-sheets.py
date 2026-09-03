@@ -40,6 +40,8 @@ SPECIES = [
     ("gengar", "gastly", "Gastly", "gastly"),
     ("snorlax", "munchlax", "Munchlax", "munchlax"),
     ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
+    ("totodile", "totodile", "Totodile", "totodile"),
+    ("pickachu", "pikachu", "Pikachu", "pickachu"),
 ]
 
 # Normalize the typos present in the source tags.
@@ -353,6 +355,7 @@ def generate_module(entries: list[dict]) -> str:
         ("gengar", "gastly"),
         ("snorlax", "munchlax"),
         ("wigglypuff", "jigglypuff"),
+        ("pikachu", "pikachu"),
     ]:
         lines.append(f"  {companion_id}: {ts_literal(species_id)},")
     lines.append("};")
