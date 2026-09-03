@@ -203,7 +203,7 @@ export function PomodoroScreen() {
           className="pointer-events-none absolute inset-x-0 bottom-10 z-0 h-1 select-none bg-primary/35 shadow-sm"
           aria-hidden="true"
         />
-        <CompanionCanvas />
+        <CompanionCanvas remainingSeconds={remaining} totalSeconds={targetSeconds} />
         <CardContent className={cn("relative z-10 flex flex-col items-center gap-6 py-10", timer ? "pb-24" : "pb-16")}>
           {timer ? (
             <>
