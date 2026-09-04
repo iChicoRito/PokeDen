@@ -249,9 +249,9 @@ let pokeDenPushTimer: ReturnType<typeof setTimeout> | null = null;
 export function notifyPokeDenSaved(data: PokeDenData): void {
   if (typeof window === "undefined") return;
   try {
-    if (pokeDenPushTimer !== null) window.clearTimeout(pokeDenPushTimer);
+    if (pokeDenPushTimer !== null) clearTimeout(pokeDenPushTimer);
     const snapshot = data;
-    pokeDenPushTimer = window.setTimeout(() => {
+    pokeDenPushTimer = setTimeout(() => {
       pokeDenPushTimer = null;
       void (async () => {
         try {

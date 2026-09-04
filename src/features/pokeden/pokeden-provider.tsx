@@ -950,6 +950,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
     void (async () => {
       try {
         const supabase = createClient();
+        if (!supabase) return;
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) return;
         const response = await fetch("/api/sync/pull", { method: "GET" });

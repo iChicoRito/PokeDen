@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import type { Session, User } from "@supabase/supabase-js";
 
-import { createClient } from "@/lib/supabase/client";
+import { type BrowserClient, createClient } from "@/lib/supabase/client";
 
 type AuthContextValue = {
   session: Session | null;
@@ -21,14 +21,18 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const supabase: BrowserClient | null = createClient();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       if (mounted) {
         setSession(data.session);
         setLoading(false);
@@ -36,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event: string, nextSession: Session | null) => {
       setSession(nextSession);
       setLoading(false);
     });
@@ -44,21 +48,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   const signIn = useCallback(async () => {
     setError(null);
+    const supabase = createClient();
+    if (!supabase) {
+      setError("Supabase is not configured.");
+      return;
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (oauthError) setError(oauthError.message);
-  }, [supabase]);
+  }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    const supabase = createClient();
+    if (supabase) await supabase.auth.signOut();
     router.push("/auth/sign-in");
-  }, [supabase, router]);
+  }, [router]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
