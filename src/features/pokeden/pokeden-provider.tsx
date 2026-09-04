@@ -37,6 +37,7 @@ import {
   getRewardXp,
   getStudyLevel,
 } from "./progression";
+import { getTimerElapsedSeconds } from "./timer-clock";
 
 export type PokeDenSetupUpdate = {
   currentStep?: number;
@@ -594,13 +595,13 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
       pauseTimer: () =>
         mutate((data) => {
           if (data.activeTimer?.status !== "running") return data;
-          const elapsed = Math.floor((Date.now() - new Date(data.activeTimer.startedAt).getTime()) / 1000);
+          const elapsed = getTimerElapsedSeconds(data.activeTimer, new Date());
           return {
             ...data,
             activeTimer: {
               ...data.activeTimer,
               status: "paused",
-              accumulatedSeconds: data.activeTimer.accumulatedSeconds + elapsed,
+              accumulatedSeconds: elapsed,
               pausedAt: nowIso(),
             },
           };
@@ -624,8 +625,8 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
         mutate((data) => {
           if (!data.activeTimer) return data;
           const timer = data.activeTimer;
-          const elapsed =
-            timer.accumulatedSeconds + Math.floor((Date.now() - new Date(timer.startedAt).getTime()) / 1000);
+          if (timer.status === "completed") return { ...data, activeTimer: null };
+          const elapsed = getTimerElapsedSeconds(timer, new Date());
           const focus: PokeDenData["focusSessions"][number] = {
             id: newId("focus-session"),
             subjectId: timer.subjectId,
@@ -658,8 +659,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           if (!data.activeTimer || data.activeTimer.status === "completed") return data;
           const timer = data.activeTimer;
           const endedAt = nowIso();
-          const elapsed =
-            timer.accumulatedSeconds + Math.floor((Date.now() - new Date(timer.startedAt).getTime()) / 1000);
+          const elapsed = getTimerElapsedSeconds(timer, new Date());
           const durationMinutes = Math.max(1, Math.round(elapsed / 60));
           const focus: PokeDenData["focusSessions"][number] = {
             id: newId("focus-session"),
@@ -699,7 +699,11 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
                     : exam,
                 )
               : next.exams;
-          let rewarded: PokeDenData = { ...next, exams, activeTimer: { ...timer, status: "completed" } };
+          let rewarded: PokeDenData = {
+            ...next,
+            exams,
+            activeTimer: { ...timer, status: "completed", accumulatedSeconds: elapsed },
+          };
           if (timer.mode === "focus") {
             const companionId = activeCompanion(data);
             rewarded = award(rewarded, focus.id, "pomodoro", durationMinutes, companionId, endedAt);

@@ -1,6 +1,7 @@
 import { addDays, endOfDay, endOfWeek, isAfter, isBefore, isSameDay, startOfDay, startOfWeek } from "date-fns";
 
 import type { CalendarEvent, Exam, FocusSession, PokeDenData, Subject, Task } from "./domain";
+import { getTimerElapsedSeconds } from "./timer-clock";
 
 const toDate = (value: string): Date => new Date(value);
 const minutesBetween = (start: Date, end: Date): number =>
@@ -208,12 +209,7 @@ export function getActiveSubjects(data: PokeDenData): Subject[] {
 
 export function getActiveTimerElapsedSeconds(data: PokeDenData, now = new Date()): number {
   const timer = data.activeTimer;
-  if (!timer) return 0;
-  const runningUntil = timer.pausedAt ? toDate(timer.pausedAt) : now;
-  return (
-    timer.accumulatedSeconds +
-    Math.max(0, Math.floor((runningUntil.getTime() - toDate(timer.startedAt).getTime()) / 1000))
-  );
+  return timer ? getTimerElapsedSeconds(timer, now) : 0;
 }
 
 export function getActiveTimerRemainingSeconds(data: PokeDenData, now = new Date()): number {
