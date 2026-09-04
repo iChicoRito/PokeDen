@@ -28,6 +28,7 @@ import {
   getTodayClasses,
 } from "@/features/pokeden/derivations";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
+import { exitPomodoroFullscreen, requestPomodoroFullscreen } from "@/features/pokeden/pomodoro-focus-mode";
 import { usePendingAction } from "@/hooks/use-pending-action";
 
 import { CalendarPanel } from "./calendar-panel";
@@ -100,6 +101,7 @@ export function DashboardScreen() {
     const planned = data.studySessions.find(
       (session) => session.subjectId === recommendation.subjectId && session.status === "planned",
     );
+    const fullscreenRequest = requestPomodoroFullscreen(document);
     void run(
       () => {
         if (planned) actions.startStudySession(planned.id);
@@ -114,7 +116,10 @@ export function DashboardScreen() {
       { minMs: 250 },
     )
       .then(() => router.push("/pomodoro"))
-      .catch(() => toast.error("Could not start the session."));
+      .catch(async () => {
+        if (await fullscreenRequest) await exitPomodoroFullscreen(document);
+        toast.error("Could not start the session.");
+      });
   };
 
   if (!isHydrated) return <DashboardSkeleton />;

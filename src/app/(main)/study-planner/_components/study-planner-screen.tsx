@@ -40,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getStudySessionProgress } from "@/features/pokeden/derivations";
 import type { StudySession } from "@/features/pokeden/domain";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
+import { exitPomodoroFullscreen, requestPomodoroFullscreen } from "@/features/pokeden/pomodoro-focus-mode";
 import { usePendingAction } from "@/hooks/use-pending-action";
 
 import { PlanCard, type PlanCardModel } from "./plan-card";
@@ -211,12 +212,16 @@ export function StudyPlannerScreen({ loading = false }: { loading?: boolean }) {
 
   function startFocus(id: string) {
     setStartingId(id);
+    const fullscreenRequest = requestPomodoroFullscreen(document);
     void run(() => actions.startStudySession(id), { minMs: 250 })
       .then(() => {
         toast.success("Focus session ready.");
         router.push("/pomodoro");
       })
-      .catch(() => toast.error("Could not start this focus session."))
+      .catch(async () => {
+        if (await fullscreenRequest) await exitPomodoroFullscreen(document);
+        toast.error("Could not start this focus session.");
+      })
       .finally(() => setStartingId(null));
   }
 
