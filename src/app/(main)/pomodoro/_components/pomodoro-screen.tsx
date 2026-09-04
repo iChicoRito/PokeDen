@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getActiveTimerElapsedSeconds, getActiveTimerRemainingSeconds } from "@/features/pokeden/derivations";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
+import { exitPomodoroFullscreen, requestPomodoroFullscreen } from "@/features/pokeden/pomodoro-focus-mode";
 import { usePendingAction } from "@/hooks/use-pending-action";
 import { cn } from "@/lib/utils";
 
@@ -63,16 +64,25 @@ export function PomodoroScreen() {
     return () => window.clearInterval(interval);
   }, [timer?.status]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: now is the per-second tick that re-evaluates completion.
   useEffect(() => {
     if (timer?.status !== "running") return;
     const remaining = getActiveTimerRemainingSeconds(data, new Date());
     if (remaining <= 0 && !completionHandledRef.current) {
       completionHandledRef.current = true;
       actions.completeTimer();
+      void exitPomodoroFullscreen(document);
       toast.success("Focus session complete. Great work!");
     }
     if (remaining > 0) completionHandledRef.current = false;
-  }, [actions, data, timer]);
+  }, [actions, data, now, timer]);
+
+  useEffect(
+    () => () => {
+      void exitPomodoroFullscreen(document);
+    },
+    [],
+  );
 
   const elapsed = timer ? getActiveTimerElapsedSeconds(data, now) : 0;
   const remaining = timer ? getActiveTimerRemainingSeconds(data, now) : 0;
@@ -120,6 +130,7 @@ export function PomodoroScreen() {
                   : null;
 
   const start = (mode: TimerMode) => {
+    const fullscreenRequest = requestPomodoroFullscreen(document);
     track(`start-${mode}`, () =>
       run(
         () => {
@@ -135,7 +146,10 @@ export function PomodoroScreen() {
           toast.success(mode === "focus" ? "Focus started. You've got this!" : "Break started. Rest well.");
         },
         { minMs: 250 },
-      ).catch(() => toast.error("Could not start the timer.")),
+      ).catch(async () => {
+        if (await fullscreenRequest) await exitPomodoroFullscreen(document);
+        toast.error("Could not start the timer.");
+      }),
     );
   };
 
@@ -143,23 +157,35 @@ export function PomodoroScreen() {
     track("pause", () =>
       run(() => actions.pauseTimer(), { minMs: 250 }).catch(() => toast.error("Could not pause the timer.")),
     );
-  const resume = () =>
+
+  const resume = () => {
+    void requestPomodoroFullscreen(document);
     track("resume", () =>
       run(() => actions.resumeTimer(), { minMs: 250 }).catch(() => toast.error("Could not resume the timer.")),
     );
+  };
+
   const stop = () =>
     track("stop", () =>
       run(
         () => {
           actions.stopTimer();
+          void exitPomodoroFullscreen(document);
           toast("Session stopped. Partial time was not counted.");
         },
         { minMs: 250 },
       ).catch(() => toast.error("Could not stop the timer.")),
     );
+
   const reset = () =>
     track("reset", () =>
-      run(() => actions.resetTimer(), { minMs: 250 }).catch(() => toast.error("Could not reset the timer.")),
+      run(
+        () => {
+          actions.resetTimer();
+          void exitPomodoroFullscreen(document);
+        },
+        { minMs: 250 },
+      ).catch(() => toast.error("Could not reset the timer.")),
     );
 
   if (!isHydrated) return <PomodoroSkeleton />;
