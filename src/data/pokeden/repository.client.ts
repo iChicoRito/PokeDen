@@ -239,3 +239,33 @@ export function subscribeToPokeDenStorage(listener: (data: PokeDenData) => void)
   window.addEventListener("storage", onStorage);
   return () => window.removeEventListener("storage", onStorage);
 }
+
+let pokeDenPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Fire-and-forget debounced cloud push (~1500ms) after a local save.
+ * Never throws; never blocks the UI.
+ */
+export function notifyPokeDenSaved(data: PokeDenData): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (pokeDenPushTimer !== null) clearTimeout(pokeDenPushTimer);
+    const snapshot = data;
+    pokeDenPushTimer = setTimeout(() => {
+      pokeDenPushTimer = null;
+      void (async () => {
+        try {
+          await fetch("/api/sync/push", {
+            body: JSON.stringify({ snapshot, snapshotUpdatedAt: snapshot.updatedAt }),
+            headers: { "content-type": "application/json" },
+            method: "POST",
+          });
+        } catch {
+          // Fire-and-forget: network failures stay silent, local cache wins.
+        }
+      })();
+    }, 1500);
+  } catch {
+    // Scheduling must never break the save path.
+  }
+}
