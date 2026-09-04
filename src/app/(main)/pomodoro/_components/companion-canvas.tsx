@@ -76,7 +76,7 @@ export function CompanionCanvas({
     () => (unlockedIds.length > 0 ? unlockedIds : [resolveCompanionId(selected)]),
     [unlockedIds, selected],
   );
-  const scale = unlockedIds.length > 4 ? 2 : 3;
+  const scale = unlockedIds.length > 4 ? 3 : 4;
 
   let motionGated = !mounted || !movementEnabled || reducedMotion;
   if (mounted) {
