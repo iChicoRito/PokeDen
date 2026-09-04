@@ -86,6 +86,8 @@ export function ExamsScreen({ loading = false }: { loading?: boolean }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ExamDraft>(EMPTY_DRAFT);
+  const [durationError, setDurationError] = useState(false);
+  const [durationErrorMessage, setDurationErrorMessage] = useState("Duration must be at least 1 minute.");
 
   const exams = useMemo(() => [...data.exams].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [data.exams]);
   const subjects = data.subjects.filter((subject) => subject.archivedAt === null);
@@ -125,8 +127,23 @@ export function ExamsScreen({ loading = false }: { loading?: boolean }) {
       toast.error("Exam title, date, and time are required.");
       return;
     }
+    const parsedDuration = Number(draft.durationMinutes);
+    if (draft.durationMinutes.trim() === "" || !Number.isFinite(parsedDuration) || parsedDuration < 1) {
+      setDurationError(true);
+      setDurationErrorMessage("Duration must be at least 1 minute.");
+      toast.error("Duration must be at least 1 minute.");
+      return;
+    }
+    if (parsedDuration > 600) {
+      setDurationError(true);
+      setDurationErrorMessage("Duration must be 600 minutes or less.");
+      toast.error("Duration must be 600 minutes or less.");
+      return;
+    }
+    setDurationError(false);
     const startsAt = new Date(`${draft.examDate}T${draft.examTime}:00`).toISOString();
-    const durationMinutes = Math.max(1, Number(draft.durationMinutes) || 60);
+    const durationMinutes = Math.round(parsedDuration);
+    const wasRounded = durationMinutes !== parsedDuration;
     void run(() => {
       if (editingId) {
         actions.updateExam(editingId, {
@@ -147,6 +164,7 @@ export function ExamsScreen({ loading = false }: { loading?: boolean }) {
         });
         toast.success("Exam added.");
       }
+      if (wasRounded) toast.info(`Duration rounded to ${durationMinutes} minutes.`);
     })
       .then(() => setDialogOpen(false))
       .catch(() => toast.error("Could not save the exam."));
@@ -308,8 +326,18 @@ export function ExamsScreen({ loading = false }: { loading?: boolean }) {
                   min={1}
                   max={600}
                   value={draft.durationMinutes}
-                  onChange={(event) => setDraft({ ...draft, durationMinutes: event.target.value })}
+                  aria-invalid={durationError}
+                  aria-describedby={durationError ? "exam-duration-error" : undefined}
+                  onChange={(event) => {
+                    setDraft({ ...draft, durationMinutes: event.target.value });
+                    if (durationError) setDurationError(false);
+                  }}
                 />
+                {durationError ? (
+                  <p id="exam-duration-error" className="text-destructive text-sm" role="alert">
+                    {durationErrorMessage}
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

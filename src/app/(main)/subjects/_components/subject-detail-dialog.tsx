@@ -62,6 +62,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getExamCountdown, getExamReadiness, getSubjectProgress } from "@/features/pokeden/derivations";
 import type { Subject } from "@/features/pokeden/domain";
+import { materialLinkSchema } from "@/features/pokeden/domain";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
 import { plainPreview } from "@/lib/note-content";
@@ -100,6 +101,18 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialUrl, setMaterialUrl] = useState("");
   const [materialKind, setMaterialKind] = useState<MaterialKind>("other");
+  // Synchronous reentrancy guard (reopen-gated, same pattern as
+  // subjects-manager.tsx:119-126): a second submit can fire in the SAME JS
+  // task before React re-renders with isPending=true, so an async/state-only
+  // guard still double-creates. Checked and set synchronously before any
+  // await; released only when the dialog (re)opens or on validation/run
+  // failure — NOT on settle, since Radix keeps the dialog mounted through
+  // its exit animation and a submit landing in that window would double-create.
+  const materialPendingRef = useRef(false);
+  // Set when a submit is attempted with an empty title; cleared on edit/retry.
+  const [titleError, setTitleError] = useState<string | null>(null);
+  // Set when a submit is attempted with an invalid URL; cleared on edit/retry.
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
 
   // Keep the last known subject rendered while the dialog animates out, so the
@@ -134,36 +147,64 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
     setMaterialTitle("");
     setMaterialUrl("");
     setMaterialKind("other");
+    setTitleError(null);
+    setUrlError(null);
+    materialPendingRef.current = false;
   };
 
   const handleMaterialDialogOpenChange = (dialogOpen: boolean) => {
     setMaterialDialogOpen(dialogOpen);
-    if (!dialogOpen) resetMaterialDraft();
+    if (!dialogOpen) {
+      resetMaterialDraft();
+    } else {
+      setTitleError(null);
+      setUrlError(null);
+      materialPendingRef.current = false;
+    }
   };
 
   const addMaterial = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: re-entrancy guard — the ref is mutated by other concurrent invocations, so it is not always falsy.
+    if (materialPendingRef.current) return;
     const title = materialTitle.trim();
     const rawUrl = materialUrl.trim();
     if (!title || !rawUrl) {
+      materialPendingRef.current = false;
+      if (!title) setTitleError("Enter a title for this material.");
+      if (!rawUrl) setUrlError("Enter a valid web address.");
       toast.error("Add a title and URL.");
       return;
     }
 
     const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    // Surface the domain zod rule (materialLinkSchema: url: z.url()) as a
+    // field-level error and block persistence before touching the store.
+    // z.url() alone accepts single-label hosts ("https://not-a-url"), so also
+    // require a dotted hostname — study-material links need a real address.
+    let hostnameOk = false;
     try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Unsupported protocol");
+      hostnameOk = new URL(url).hostname.includes(".");
     } catch {
+      hostnameOk = false;
+    }
+    if (!hostnameOk || !materialLinkSchema.shape.url.safeParse(url).success) {
+      materialPendingRef.current = false;
+      setUrlError("Enter a valid web address, e.g. https://example.com/resource.");
       toast.error("Enter a valid web address.");
       return;
     }
+    setTitleError(null);
+    setUrlError(null);
 
     if (renderSubject.materialLinks.some((material) => material.url.toLowerCase() === url.toLowerCase())) {
+      materialPendingRef.current = false;
       toast.error("That material is already linked.");
       return;
     }
 
+    // Set synchronously before any await — second submit in the same task is dropped.
+    materialPendingRef.current = true;
     void run(() =>
       actions.updateSubject(renderSubject.id, {
         materialLinks: [
@@ -181,7 +222,10 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
         handleMaterialDialogOpenChange(false);
         toast.success("Material added.");
       })
-      .catch(() => toast.error("Could not add the material."));
+      .catch(() => {
+        materialPendingRef.current = false;
+        toast.error("Could not add the material.");
+      });
   };
 
   return (
@@ -702,28 +746,46 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
             <DialogTitle>Add material</DialogTitle>
             <DialogDescription>Add a resource link to {renderSubject.name}.</DialogDescription>
           </DialogHeader>
-          <form className="grid gap-4" onSubmit={addMaterial}>
-            <div className="grid gap-2">
+          <form className="grid gap-4" onSubmit={addMaterial} noValidate>
+            <div className="grid gap-2" data-invalid={titleError ? true : undefined}>
               <Label htmlFor="material-title">Title</Label>
               <Input
                 id="material-title"
                 value={materialTitle}
-                onChange={(event) => setMaterialTitle(event.target.value)}
+                onChange={(event) => {
+                  setMaterialTitle(event.target.value);
+                  if (titleError) setTitleError(null);
+                }}
                 placeholder="Chapter 4 slides"
                 maxLength={120}
-                required
+                aria-invalid={titleError ? true : undefined}
+                aria-describedby={titleError ? "material-title-error" : undefined}
               />
+              {titleError ? (
+                <div id="material-title-error" role="alert" className="text-destructive text-sm">
+                  {titleError}
+                </div>
+              ) : null}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-2" data-invalid={urlError ? true : undefined}>
               <Label htmlFor="material-url">URL</Label>
               <Input
                 id="material-url"
                 value={materialUrl}
-                onChange={(event) => setMaterialUrl(event.target.value)}
+                onChange={(event) => {
+                  setMaterialUrl(event.target.value);
+                  if (urlError) setUrlError(null);
+                }}
                 placeholder="https://example.com/resource"
                 inputMode="url"
-                required
+                aria-invalid={urlError ? true : undefined}
+                aria-describedby={urlError ? "material-url-error" : undefined}
               />
+              {urlError ? (
+                <div id="material-url-error" role="alert" className="text-destructive text-sm">
+                  {urlError}
+                </div>
+              ) : null}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="material-kind">Type</Label>
@@ -744,12 +806,7 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
               <Button type="button" variant="outline" onClick={() => handleMaterialDialogOpenChange(false)}>
                 Cancel
               </Button>
-              <LoadingButton
-                loading={isPending}
-                loadingLabel="Adding…"
-                type="submit"
-                disabled={!materialTitle.trim() || !materialUrl.trim()}
-              >
+              <LoadingButton loading={isPending} loadingLabel="Adding…" type="submit">
                 <Plus /> Add material
               </LoadingButton>
             </DialogFooter>
