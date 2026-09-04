@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { Check, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/app/(main)/_components/page-header";
@@ -33,6 +33,8 @@ import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
 import { cn } from "@/lib/utils";
 
+import { AccountCard } from "./account-card";
+
 export function SettingsScreen() {
   const router = useRouter();
   const data = usePokeDenStore((state) => state.data);
@@ -43,7 +45,6 @@ export function SettingsScreen() {
 
   const [profile, setProfile] = useState({ name: "", course: "" });
   const [confirmClear, setConfirmClear] = useState(false);
-  const [confirmResetDemo, setConfirmResetDemo] = useState(false);
   const [confirmResetAll, setConfirmResetAll] = useState(false);
   const hydratedOnceRef = useRef(false);
 
@@ -307,30 +308,16 @@ export function SettingsScreen() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Sign-in and durable storage arrive with the production version.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">Your data currently stays on this device.</p>
-        </CardContent>
-      </Card>
+      <AccountCard />
 
-      <Card>
+      <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle>Data</CardTitle>
-          <CardDescription>Manage the local demo data for this device.</CardDescription>
+          <CardTitle className="text-destructive">Danger zone</CardTitle>
+          <CardDescription>These actions are permanent and cannot be undone.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => router.push("/onboarding?revisit=1")}>
-            <RotateCcw /> Revisit onboarding
-          </Button>
           <Button variant="outline" onClick={() => setConfirmClear(true)}>
             <Trash2 /> Clear academic data
-          </Button>
-          <Button variant="outline" onClick={() => setConfirmResetDemo(true)}>
-            <RefreshCcw /> Reset demo data
           </Button>
           <Button variant="destructive" onClick={() => setConfirmResetAll(true)}>
             <Trash2 /> Full reset
@@ -367,37 +354,6 @@ export function SettingsScreen() {
                 </>
               ) : (
                 "Clear data"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmResetDemo} onOpenChange={setConfirmResetDemo}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset demo data?</AlertDialogTitle>
-            <AlertDialogDescription>Replaces everything with the original sample records.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
-                void run(() => actions.resetDemoData())
-                  .then(() => {
-                    toast.success("Demo data restored.");
-                    setConfirmResetDemo(false);
-                  })
-                  .catch(() => toast.error("Could not reset demo data."));
-              }}
-            >
-              {isPending ? (
-                <>
-                  <Spinner className="size-4" /> Restoring…
-                </>
-              ) : (
-                "Reset demo"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
