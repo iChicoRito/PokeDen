@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS public.tbl_profiles (
 ALTER TABLE public.tbl_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "tbl_profiles_owner_all" ON public.tbl_profiles;
 CREATE POLICY "tbl_profiles_owner_all" ON public.tbl_profiles
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR ALL TO authenticated
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 CREATE INDEX IF NOT EXISTS tbl_profiles_snapshot_updated_at_idx
   ON public.tbl_profiles (snapshot_updated_at DESC);
 
