@@ -109,19 +109,34 @@ export function PlanCard({
             Completed
           </span>
         ) : (
-          <Button size="sm" variant="outline" onClick={actions.onStartFocus} disabled={busy}>
-            {busy ? (
-              <>
-                <Spinner className="size-4" aria-hidden="true" />
-                Starting…
-              </>
-            ) : (
-              <>
-                <Play aria-hidden="true" />
-                Start focus
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={`Mark ${plan.title} complete`}
+              onClick={(event) => {
+                event.stopPropagation();
+                actions.onComplete();
+              }}
+              disabled={busy}
+            >
+              <Check aria-hidden="true" />
+              Complete
+            </Button>
+            <Button size="sm" variant="outline" onClick={actions.onStartFocus} disabled={busy}>
+              {busy ? (
+                <>
+                  <Spinner className="size-4" aria-hidden="true" />
+                  Starting…
+                </>
+              ) : (
+                <>
+                  <Play aria-hidden="true" />
+                  Start focus
+                </>
+              )}
+            </Button>
+          </div>
         )}
       </CardFooter>
     </Card>
