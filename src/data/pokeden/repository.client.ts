@@ -97,6 +97,38 @@ function ensureDemoTodayClass(data: PokeDenData, now: Date): PokeDenData {
   };
 }
 
+/**
+ * A genuinely fresh profile (no stored data) starts with zero records so the
+ * user lands in onboarding. Default-taste preferences (focus/break minutes,
+ * companion defaults) are kept from the demo baseline, mirroring the shape
+ * resetAllData() produces.
+ */
+export function createEmptyPokeDenData(now = new Date()): PokeDenData {
+  const data = createDemoPokeDenData(now);
+  return {
+    ...data,
+    setupCompleted: false,
+    onboardingStep: 0,
+    profile: {
+      ...data.profile,
+      name: "Student",
+      displayName: "Student",
+      school: "",
+      course: "",
+    },
+    subjects: [],
+    tasks: [],
+    studySessions: [],
+    notes: [],
+    exams: [],
+    focusSessions: [],
+    grades: [],
+    studyProgress: createEmptyStudyProgress(),
+    activeTimer: null,
+    updatedAt: now.toISOString(),
+  };
+}
+
 export function loadPokeDenData(): RepositoryLoadResult {
   const fallback = createDemoPokeDenData();
   let storage: Storage;
@@ -108,8 +140,11 @@ export function loadPokeDenData(): RepositoryLoadResult {
   try {
     const raw = storage.getItem(POKEDEN_STORAGE_KEY);
     if (!raw) {
-      savePokeDenData(fallback);
-      return { data: fallback, recovered: false, error: null };
+      // Absent key = first-time user: empty records, onboarding pending.
+      // (Previously this seeded the demo dataset, which made onboarding unreachable.)
+      const fresh = createEmptyPokeDenData();
+      savePokeDenData(fresh);
+      return { data: fresh, recovered: false, error: null };
     }
     const data = parse(raw);
     if (data) {
