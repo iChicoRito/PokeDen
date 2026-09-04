@@ -73,6 +73,16 @@ export function PomodoroScreen() {
       actions.completeTimer();
       void exitPomodoroFullscreen(document);
       toast.success("Focus session complete. Great work!");
+      // Normalize the completed-but-not-idle limbo: transition back to the idle
+      // view (mode tabs + Start CTA) through the store's own reset flow.
+      track("reset", () =>
+        run(
+          () => {
+            actions.resetTimer();
+          },
+          { minMs: 250 },
+        ).catch(() => toast.error("Could not reset the timer.")),
+      );
     }
     if (remaining > 0) completionHandledRef.current = false;
   }, [actions, data, now, timer]);
