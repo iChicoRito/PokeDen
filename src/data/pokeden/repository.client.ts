@@ -123,6 +123,10 @@ export function createEmptyPokeDenData(now = new Date()): PokeDenData {
     exams: [],
     focusSessions: [],
     grades: [],
+    // First-run state: no demo event feed (its relatedIds point at demo
+    // records that do not exist here) and a zeroed companion state.
+    companionState: { mood: "idle", energy: 100, experience: 0, lastInteractionAt: null },
+    companionEvents: [],
     studyProgress: createEmptyStudyProgress(),
     activeTimer: null,
     updatedAt: now.toISOString(),
@@ -139,9 +143,11 @@ export function loadPokeDenData(): RepositoryLoadResult {
   }
   try {
     const raw = storage.getItem(POKEDEN_STORAGE_KEY);
-    if (!raw) {
+    if (raw === null) {
       // Absent key = first-time user: empty records, onboarding pending.
       // (Previously this seeded the demo dataset, which made onboarding unreachable.)
+      // Strict null check: a corrupt empty-string value must fall through to
+      // the backup-recovery path below instead of masquerading as first-run.
       const fresh = createEmptyPokeDenData();
       savePokeDenData(fresh);
       return { data: fresh, recovered: false, error: null };
