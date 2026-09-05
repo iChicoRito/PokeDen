@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CompanionId } from "@/features/pokeden/companions";
 import { COMPANION_CATALOG, resolveCompanionId } from "@/features/pokeden/companions";
@@ -23,10 +23,28 @@ type Actor = {
   speed: number;
   phaseRemaining: number;
   frameAccumulator: number;
+  lift: number; // px above the ground baseline; 0 = resting on the ground
+  falling: boolean;
+  fallVelocity: number; // px/s, positive = moving down, negative = bounce rebound
+  dragging: boolean;
+  dragPointerId: number | null;
+  dragOffsetX: number; // pointer→sprite-left offset at grab, canvas px
+  dragOffsetY: number; // pointer→sprite-top offset at grab, canvas px
 };
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+const GRAVITY_SCALE = 2.2; // gravity = 2.2 × canvas height, px/s² — same feel in the card and full-viewport focus
+const MAX_FALL_SPEED = 1200; // px/s terminal velocity; with the 0.1s delta clamp, max travel is 120px/frame → no tunneling
+const BOUNCE_RESTITUTION = 0.3; // rebound keeps 30% of impact speed
+const BOUNCE_SETTLE_SPEED = 150; // px/s; impacts slower than this settle instead of bouncing
+const GROUND_SETTLE_PX = 12; // release with feet within this distance of the ground settles instantly
+
+function computeBaseline(containerHeight: number, displayHeight: number): number {
+  const desiredBaseline = containerHeight - 10;
+  return Math.min(containerHeight, Math.max(Math.min(displayHeight, containerHeight), desiredBaseline));
 }
 
 export function CompanionCanvas({
@@ -116,7 +134,9 @@ export function CompanionCanvas({
       const species = getDisplaySpeciesForCompanion(id, phase, (s) => SPRITE_SHEETS[s] !== undefined);
       const sheet = SPRITE_SHEETS[species];
       const displayWidth = sheet.frameWidth * scale;
+      const displayHeight = sheet.frameHeight * scale;
       const maxX = Math.max(0, canvasSize.width - displayWidth);
+      const liftMax = Math.max(0, computeBaseline(canvasSize.height, displayHeight) - displayHeight);
       const slotX = clamp(((i + 0.5) / count) * canvasSize.width - displayWidth / 2, 0, maxX);
       const old = prev.find((actor) => actor.companionId === id);
       const speciesChanged = old !== undefined && old.species !== species;
@@ -133,12 +153,105 @@ export function CompanionCanvas({
         speed: old?.speed ?? (24 + ((i * 13) % 17)) * (scale / 2),
         phaseRemaining: old?.phaseRemaining ?? 2 + ((i * 1.3) % 4),
         frameAccumulator: old?.frameAccumulator ?? 0,
+        // Motion gate flips ground the sprite; drag state carries unconditionally so dragging
+        // keeps working while gated (next pointermove re-derives from the pointer).
+        lift: old && !motionGated ? clamp(old.lift, 0, liftMax) : 0,
+        falling: old ? old.falling && !motionGated : false,
+        fallVelocity: old && !motionGated ? old.fallVelocity : 0,
+        dragging: old?.dragging ?? false,
+        dragPointerId: old?.dragPointerId ?? null,
+        dragOffsetX: old?.dragOffsetX ?? 0,
+        dragOffsetY: old?.dragOffsetY ?? 0,
       };
     });
 
     actorsRef.current = next;
     setActors(next);
   }, [actorIds, canvasSize.height, canvasSize.width, mounted, motionGated, phase, scale]);
+
+  // Single mutation path for pointer events: ref write + setState, so a re-render
+  // happens even when the rAF loop is not running (motionGated).
+  const updateActor = (companionId: CompanionId, patch: Partial<Actor>) => {
+    const next = actorsRef.current.map((actor) => (actor.companionId === companionId ? { ...actor, ...patch } : actor));
+    actorsRef.current = next;
+    setActors(next);
+  };
+
+  // If the canvas hides mid-drag, release drags so no sprite respawns frozen as "grabbed".
+  useEffect(() => {
+    if (visible || actorsRef.current.length === 0) return;
+    actorsRef.current = actorsRef.current.map((actor) => ({
+      ...actor,
+      dragging: false,
+      dragPointerId: null,
+      falling: false,
+      fallVelocity: 0,
+      lift: 0,
+    }));
+    setActors(actorsRef.current);
+  }, [visible]);
+
+  const findActor = (companionId: CompanionId) => actorsRef.current.find((actor) => actor.companionId === companionId);
+
+  // Rect is re-read on every event — survives scroll, resize, and normal↔focus relayout mid-drag.
+  const toCanvasPoint = (event: ReactPointerEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    return rect ? { x: event.clientX - rect.left, y: event.clientY - rect.top } : null;
+  };
+
+  const handleSpritePointerDown = (event: ReactPointerEvent<HTMLDivElement>, companionId: CompanionId) => {
+    if (event.button !== 0) return;
+    const actor = findActor(companionId);
+    if (!actor || (actor.dragging && actor.dragPointerId !== event.pointerId)) return;
+    const point = toCanvasPoint(event);
+    if (!point) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const displayHeight = actor.sheet.frameHeight * actor.scale;
+    const baseline = computeBaseline(canvasSize.height, displayHeight);
+    updateActor(companionId, {
+      dragging: true,
+      dragPointerId: event.pointerId,
+      dragOffsetX: point.x - actor.x,
+      dragOffsetY: point.y - Math.max(0, baseline - displayHeight - actor.lift),
+      falling: false, // catching a falling sprite mid-air freezes it in the hand
+      fallVelocity: 0,
+    });
+  };
+
+  const handleSpritePointerMove = (event: ReactPointerEvent<HTMLDivElement>, companionId: CompanionId) => {
+    const actor = findActor(companionId);
+    if (!actor?.dragging || actor.dragPointerId !== event.pointerId) return;
+    const point = toCanvasPoint(event);
+    if (!point) return;
+    const displayWidth = actor.sheet.frameWidth * actor.scale;
+    const displayHeight = actor.sheet.frameHeight * actor.scale;
+    const maxX = Math.max(0, canvasSize.width - displayWidth);
+    const baseline = computeBaseline(canvasSize.height, displayHeight);
+    const liftMax = Math.max(0, baseline - displayHeight);
+    // Clamps: left ∈ [0, maxX]; lift ∈ [0, liftMax] ⟺ sprite top ≥ 0 and feet baseline ∈
+    // [displayHeight, baseline] — the feet never sink below the ground strip nor rise past the top.
+    updateActor(companionId, {
+      x: clamp(point.x - actor.dragOffsetX, 0, maxX),
+      lift: clamp(baseline - displayHeight - (point.y - actor.dragOffsetY), 0, liftMax),
+    });
+  };
+
+  // Shared by onPointerUp / onPointerCancel / onLostPointerCapture; idempotent after the first call.
+  const endSpriteDrag = (event: ReactPointerEvent<HTMLDivElement>, companionId: CompanionId) => {
+    const actor = findActor(companionId);
+    if (!actor?.dragging || actor.dragPointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const settle = motionGated || actor.lift <= GROUND_SETTLE_PX;
+    updateActor(companionId, {
+      dragging: false,
+      dragPointerId: null,
+      falling: !settle,
+      fallVelocity: 0,
+      lift: settle ? 0 : actor.lift,
+    });
+  };
 
   // One loop owns behavior phases, horizontal movement, and sprite frame advancement for all actors.
   useEffect(() => {
@@ -162,6 +275,35 @@ export function CompanionCanvas({
 
       if (list.length > 0) {
         const next = list.map((current) => {
+          if (current.dragging) {
+            return current; // held: pointer handlers own it; no phase timer, walking, or frame advance
+          }
+
+          if (current.falling) {
+            const gravity = GRAVITY_SCALE * canvasSize.height; // canvasSize.height is already an effect dep
+            const fallVelocity = Math.min(MAX_FALL_SPEED, current.fallVelocity + gravity * delta);
+            const lift = current.lift - fallVelocity * delta;
+            if (lift > 0) {
+              return { ...current, lift, fallVelocity }; // airborne; frame and x held
+            }
+            if (fallVelocity > BOUNCE_SETTLE_SPEED) {
+              return { ...current, lift: 0, fallVelocity: -fallVelocity * BOUNCE_RESTITUTION }; // bounce upward
+            }
+            // land: resume idle facing the last direction
+            const facing = current.state.endsWith("left") ? "left" : "right";
+            const state: SpriteStateName = `idle-${facing}`;
+            return {
+              ...current,
+              lift: 0,
+              fallVelocity: 0,
+              falling: false,
+              state,
+              frameIndex: current.sheet.states[state].from,
+              frameAccumulator: 0,
+              phaseRemaining: 2 + Math.random() * 4,
+            };
+          }
+
           let state = current.state;
           let frameIndex = current.frameIndex;
           let x = current.x;
@@ -258,19 +400,20 @@ export function CompanionCanvas({
       {actors.map((actor) => {
         const displayWidth = actor.sheet.frameWidth * actor.scale;
         const displayHeight = actor.sheet.frameHeight * actor.scale;
-        // Anchor each companion's feet to the bottom ground strip.
-        const desiredBaseline = canvasSize.height - 10;
-        const baseline = Math.min(
-          canvasSize.height,
-          Math.max(Math.min(displayHeight, canvasSize.height), desiredBaseline),
-        );
-        const top = Math.max(0, baseline - displayHeight);
+        // Anchor each companion's feet to the ground strip, lifted by actor.lift while airborne/held.
+        const baseline = computeBaseline(canvasSize.height, displayHeight);
+        const top = Math.max(0, baseline - displayHeight - actor.lift);
         const stateRange = actor.sheet.states[actor.state];
         const displayedFrame = Math.min(stateRange.to, Math.max(stateRange.from, Math.floor(actor.frameIndex)));
         return (
           <div
             key={actor.companionId}
-            className="pokeden-pixelated absolute"
+            className={`pokeden-pixelated absolute touch-none select-none ${actor.dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            onPointerDown={(event) => handleSpritePointerDown(event, actor.companionId)}
+            onPointerMove={(event) => handleSpritePointerMove(event, actor.companionId)}
+            onPointerUp={(event) => endSpriteDrag(event, actor.companionId)}
+            onPointerCancel={(event) => endSpriteDrag(event, actor.companionId)}
+            onLostPointerCapture={(event) => endSpriteDrag(event, actor.companionId)}
             style={{
               left: actor.x,
               top,
@@ -281,6 +424,8 @@ export function CompanionCanvas({
               backgroundPosition: `${-(displayedFrame * actor.sheet.frameWidth * actor.scale)}px 0`,
               backgroundRepeat: "no-repeat",
               transform: stateRange?.flip === true ? "scaleX(-1)" : undefined,
+              pointerEvents: "auto", // opt-in escape from the container's pointerEvents: "none"
+              zIndex: actor.dragging || actor.falling ? 5 : undefined, // above siblings, below CardContent z-10
             }}
           />
         );

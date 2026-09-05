@@ -14,7 +14,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getActiveTimerElapsedSeconds, getActiveTimerRemainingSeconds } from "@/features/pokeden/derivations";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
-import { exitPomodoroFullscreen, requestPomodoroFullscreen } from "@/features/pokeden/pomodoro-focus-mode";
+import {
+  exitPomodoroFullscreen,
+  isPomodoroFocusModeActive,
+  requestPomodoroFullscreen,
+} from "@/features/pokeden/pomodoro-focus-mode";
 import { usePendingAction } from "@/hooks/use-pending-action";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +53,7 @@ export function PomodoroScreen() {
   const { run } = usePendingAction();
 
   const timer = data.activeTimer;
+  const focusLayout = isPomodoroFocusModeActive(timer?.status);
   const companionVisible = data.companionPreferences.visible;
   const [now, setNow] = useState(() => new Date());
   const [selectedMode, setSelectedMode] = useState<TimerMode>(timer?.mode ?? "focus");
@@ -201,7 +206,15 @@ export function PomodoroScreen() {
   if (!isHydrated) return <PomodoroSkeleton />;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-6 p-4 sm:p-6 lg:p-8">
+    <div
+      className={
+        focusLayout
+          ? // Fixed viewport height + overflow-hidden keep the card flush with the
+            // viewport bottom edge (and keep the vertical scrollbar away).
+            "relative flex h-svh w-full flex-col items-center gap-6 overflow-hidden"
+          : "mx-auto flex w-full max-w-7xl flex-col items-center gap-6 p-4 sm:p-6 lg:p-8"
+      }
+    >
       <PageHeader
         title="Focus, one interval at a time"
         description="Start a planned session here or choose a mode and begin."
@@ -230,7 +243,12 @@ export function PomodoroScreen() {
         </Tabs>
       ) : null}
 
-      <Card className="relative min-h-[340px] w-full overflow-hidden border-primary/20 bg-gradient-to-b from-secondary/40 via-background to-background shadow-sm">
+      <Card
+        className={cn(
+          "relative min-h-[340px] w-full overflow-hidden border-primary/20 bg-transparent shadow-sm",
+          focusLayout && "grow",
+        )}
+      >
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-10 select-none border-primary/20 border-t bg-gradient-to-t from-secondary/50 via-secondary/25 to-transparent"
           aria-hidden="true"
@@ -240,7 +258,17 @@ export function PomodoroScreen() {
           aria-hidden="true"
         />
         <CompanionCanvas remainingSeconds={remaining} totalSeconds={targetSeconds} />
-        <CardContent className={cn("relative z-10 flex flex-col items-center gap-6 py-10", timer ? "pb-24" : "pb-16")}>
+        <CardContent
+          className={cn(
+            // pointer-events-none lets companion sprites under this overlay receive
+            // pointer events; interactive rows below opt back in with pointer-events-auto.
+            "pointer-events-none relative z-10 flex flex-col items-center gap-6 py-10",
+            timer ? "pb-24" : "pb-16",
+            // Focus layout: top-aligned compact content leaves the lower card area to
+            // the floating dock and the sprites' resting zone above the ground strip.
+            focusLayout && "flex-1 justify-start gap-4 pt-8 pb-0",
+          )}
+        >
           {timer ? (
             <>
               <div className="flex items-center gap-2">
@@ -280,7 +308,7 @@ export function PomodoroScreen() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2">
                 {timer.status === "running" ? (
                   <LoadingButton
                     size="lg"
@@ -329,7 +357,7 @@ export function PomodoroScreen() {
                   <RotateCcw /> Reset
                 </LoadingButton>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2">
                 <LoadingButton
                   variant="outline"
                   size="sm"
@@ -364,6 +392,7 @@ export function PomodoroScreen() {
               </div>
               <LoadingButton
                 size="lg"
+                className="pointer-events-auto"
                 loading={pendingAction === `start-${selectedMode}`}
                 loadingLabel="Starting…"
                 onClick={() => start(selectedMode)}
@@ -376,14 +405,32 @@ export function PomodoroScreen() {
       </Card>
 
       {timer ? (
-        <div className="flex w-full justify-center">
+        <div
+          className={cn(
+            "flex w-full justify-center",
+            // In focus mode the progress bar overlays the card's bottom area so the
+            // card itself can own the full viewport height.
+            focusLayout && "pointer-events-none absolute inset-x-0 bottom-3 z-20 px-6",
+          )}
+        >
           <div className="h-1 w-full max-w-3xl overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
       ) : null}
 
-      {companionVisible ? <CompanionDock /> : null}
+      {companionVisible ? (
+        <div
+          className={cn(
+            "w-full",
+            // In focus mode the dock floats above the sprites' resting zone so it
+            // never covers the ground strip where companions are grabbed.
+            focusLayout && "absolute inset-x-0 bottom-24 z-20 px-4 sm:px-6",
+          )}
+        >
+          <CompanionDock />
+        </div>
+      ) : null}
     </div>
   );
 }
