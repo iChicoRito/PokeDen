@@ -20,6 +20,8 @@ type Actor = {
   state: SpriteStateName;
   frameIndex: number;
   x: number;
+  laneMin: number; // left edge of this sprite's personal-space lane (canvas px)
+  laneMax: number; // right edge of this sprite's personal-space lane (canvas px)
   speed: number;
   phaseRemaining: number;
   frameAccumulator: number;
@@ -48,9 +50,25 @@ const THROW_VELOCITY_SCALE = 1.15; // pointer px/s → released momentum px/s, s
 const MAX_THROW_SPEED = 1600; // px/s cap per axis so flings stay inside the card
 const THROW_SAMPLE_MS = 90; // velocity window: average pointer travel over the last 90ms
 const THROW_MIN_SPEED = 120; // px/s; slower releases count as plain drops, not throws
+const IDLE_PHASE_MIN = 0.4; // s; idle pauses are 0.4-1.0s so any pause stays <= ~1s
+const IDLE_PHASE_RANGE = 0.6; // s; idle duration = IDLE_PHASE_MIN + random * IDLE_PHASE_RANGE
+const WALK_PHASE_MIN = 1.6; // s; walking bursts are 1.6-4.0s — long enough to pace the lane, short enough to feel alive
+const WALK_PHASE_RANGE = 2.4; // s; walk duration = WALK_PHASE_MIN + random * WALK_PHASE_RANGE
+const AMBIENT_JUMP_CHANCE = 0.3; // probability of a hop when entering idle (ungated ambient jumps only)
+const EDGE_PAD_X = 4; // px; sprites rest this far inside the card edges, clear of the border/radius
 
+// Horizontal roam bounds inside the card: [minX, boundedMaxX]. Collapses to a
+// single pin point when the canvas is narrower than the sprite + padding.
+function xBounds(maxX: number): { minX: number; boundedMaxX: number } {
+  const minX = Math.min(EDGE_PAD_X, maxX);
+  return { minX, boundedMaxX: Math.max(minX, maxX - EDGE_PAD_X) };
+}
+
+// Feet rest on the ground line: pomodoro-screen draws the line at bottom-10
+// (40px above the container bottom) atop the h-10 ground strip, so the feet
+// baseline sits at containerHeight - 40 — not sunk into the strip.
 function computeBaseline(containerHeight: number, displayHeight: number): number {
-  const desiredBaseline = containerHeight - 10;
+  const desiredBaseline = containerHeight - 40;
   return Math.min(containerHeight, Math.max(Math.min(displayHeight, containerHeight), desiredBaseline));
 }
 
@@ -103,7 +121,11 @@ export function CompanionCanvas({
   );
   // Narrow canvases (mobile) render sprites at a moderately reduced integer scale;
   // desktop keeps the large sprites. Integer scales keep the pixel art crisp.
-  const scale = canvasSize.width > 0 && canvasSize.width < 640 ? 3 : unlockedIds.length > 4 ? 4 : 5;
+  // Scale also shrinks as the roster grows so N sprites share the card without
+  // piling: 11 × 112px ≈ 1232px still fits a 1216px card with touching slots,
+  // while 11 × 140px ≈ 1540px cannot — hence scale 3 once 7+ are unlocked.
+  const scale =
+    canvasSize.width > 0 && canvasSize.width < 640 ? 3 : unlockedIds.length > 6 ? 3 : unlockedIds.length > 4 ? 4 : 5;
 
   let motionGated = !mounted || !movementEnabled || reducedMotion;
   if (mounted) {
@@ -146,10 +168,26 @@ export function CompanionCanvas({
       const displayHeight = sheet.frameHeight * scale;
       const maxX = Math.max(0, canvasSize.width - displayWidth);
       const liftMax = Math.max(0, computeBaseline(canvasSize.height, displayHeight) - displayHeight);
-      const slotX = clamp(((i + 0.5) / count) * canvasSize.width - displayWidth / 2, 0, maxX);
+      const { minX, boundedMaxX } = xBounds(maxX);
+      // Deterministic slot centers spread actors evenly; the slot's own lane
+      // half-width reserves personal space so a fresh spawn never overlaps a neighbor.
+      // Lanes are clamped to the padded roam band and collapse to a pin point when
+      // the canvas is too narrow to give every sprite its own segment.
+      const slotCenter = ((i + 0.5) / count) * canvasSize.width;
+      // Lane half-width: leave a 4px gap between neighboring lanes so sprites at
+      // adjacent edges never touch; reserve sprite half-width so the whole body
+      // fits inside its own lane even at rest.
+      const laneHalf = Math.max(0, canvasSize.width / count / 2 - 4 - displayWidth / 2);
+      const laneMin = clamp(slotCenter - laneHalf, minX, boundedMaxX);
+      const laneMax = clamp(slotCenter + laneHalf, minX, boundedMaxX);
+      const slotX = clamp(slotCenter - displayWidth / 2, Math.min(laneMin, laneMax), Math.max(laneMin, laneMax));
       const old = prev.find((actor) => actor.companionId === id);
       const speciesChanged = old !== undefined && old.species !== species;
-      const state: SpriteStateName = motionGated ? "idle-right" : (old?.state ?? "idle-right");
+      // Alternate initial facing so sprites disperse instead of marching right in lockstep
+      // (previously every actor spawned idle-right and walked right together, piling at one edge).
+      const state: SpriteStateName = motionGated
+        ? "idle-right"
+        : (old?.state ?? (i % 2 === 0 ? "idle-right" : "idle-left"));
       const range = sheet.states[state];
       return {
         companionId: id,
@@ -158,9 +196,15 @@ export function CompanionCanvas({
         scale,
         state,
         frameIndex: motionGated || !old || speciesChanged ? range.from : old.frameIndex,
-        x: old ? clamp(old.x, 0, maxX) : slotX,
-        speed: old?.speed ?? (24 + ((i * 13) % 17)) * (scale / 2),
-        phaseRemaining: old?.phaseRemaining ?? 2 + ((i * 1.3) % 4),
+        x: old ? clamp(old.x, minX, boundedMaxX) : slotX,
+        // Slot lane reserves personal space: walking clamps to [laneMin, laneMax]
+        // so roamers pace inside their own segment instead of drifting into a neighbor.
+        laneMin,
+        laneMax,
+        // Stagger roam speed per sprite (8–20× scale/2 px/s) so neighbors drift
+        // apart instead of keeping formation and stacking on the same slot.
+        speed: old?.speed ?? (8 + ((i * 7) % 13)) * (scale / 2),
+        phaseRemaining: old?.phaseRemaining ?? IDLE_PHASE_MIN + ((i * 1.3) % IDLE_PHASE_RANGE),
         frameAccumulator: old?.frameAccumulator ?? 0,
         // Motion gate flips ground the sprite; drag state carries unconditionally so dragging
         // keeps working while gated (next pointermove re-derives from the pointer).
@@ -247,10 +291,11 @@ export function CompanionCanvas({
     const deltaX = point.x - actor.dragOffsetX - actor.x;
     const facing = deltaX > 3 ? "right" : deltaX < -3 ? "left" : actor.state.endsWith("left") ? "left" : "right";
     const state: SpriteStateName = `idle-${facing}`;
-    // Clamps: left ∈ [0, maxX]; lift ∈ [0, liftMax] ⟺ sprite top ≥ 0 and feet baseline ∈
-    // [displayHeight, baseline] — the feet never sink below the ground strip nor rise past the top.
+    // Clamps: left ∈ [minX, boundedMaxX]; lift ∈ [0, liftMax] ⟺ sprite top ≥ 0 and feet baseline ∈
+    // [displayHeight, baseline] — the feet never sink below the ground line nor rise past the top.
+    const { minX, boundedMaxX } = xBounds(maxX);
     updateActor(companionId, {
-      x: clamp(point.x - actor.dragOffsetX, 0, maxX),
+      x: clamp(point.x - actor.dragOffsetX, minX, boundedMaxX),
       lift: clamp(baseline - displayHeight - (point.y - actor.dragOffsetY), 0, liftMax),
       state,
       frameIndex: actor.state === state ? actor.frameIndex : actor.sheet.states[state].from,
@@ -346,13 +391,14 @@ export function CompanionCanvas({
             const liftMax = Math.max(0, computeBaseline(canvasSize.height, displayHeight) - displayHeight);
 
             // Horizontal throw momentum with wall bounces (restitution, no friction mid-air).
-            let x = current.x + current.airborneXVelocity * delta;
+            const { minX, boundedMaxX } = xBounds(maxX);
+            let x = clamp(current.x + current.airborneXVelocity * delta, minX, boundedMaxX);
             let airborneXVelocity = current.airborneXVelocity;
-            if (x <= 0) {
-              x = 0;
+            if (x <= minX) {
+              x = minX;
               airborneXVelocity = Math.abs(airborneXVelocity) * BOUNCE_RESTITUTION;
-            } else if (x >= maxX) {
-              x = maxX;
+            } else if (x >= boundedMaxX) {
+              x = boundedMaxX;
               airborneXVelocity = -Math.abs(airborneXVelocity) * BOUNCE_RESTITUTION;
             }
 
@@ -376,20 +422,23 @@ export function CompanionCanvas({
                 x,
               };
             }
-            // land: resume idle facing the last direction
+            // Land: resume idle facing the last direction with a short pause (<= ~1s).
+            // Settle inside the sprite's own lane so a wall bounce never parks on a neighbor.
             const facing = current.state.endsWith("left") ? "left" : "right";
             const state: SpriteStateName = `idle-${facing}`;
+            const laneLo = Math.min(current.laneMin, current.laneMax);
+            const laneHi = Math.max(current.laneMin, current.laneMax);
             return {
               ...current,
               lift: 0,
               fallVelocity: 0,
               falling: false,
               airborneXVelocity: 0,
-              x,
+              x: clamp(x, laneLo, laneHi),
               state,
               frameIndex: current.sheet.states[state].from,
               frameAccumulator: 0,
-              phaseRemaining: 2 + Math.random() * 4,
+              phaseRemaining: IDLE_PHASE_MIN + Math.random() * IDLE_PHASE_RANGE,
             };
           }
 
@@ -406,28 +455,65 @@ export function CompanionCanvas({
 
           if (phaseRemaining <= 0) {
             const facing = state.endsWith("left") ? "left" : "right";
-            state = state.startsWith("walking") ? `idle-${facing}` : `walking-${facing}`;
+            const enteringIdle = state.startsWith("walking");
+            state = enteringIdle ? `idle-${facing}` : `walking-${facing}`;
             frameIndex = current.sheet.states[state].from;
             frameAccumulator = 0;
-            phaseRemaining = 2 + Math.random() * 4;
+            phaseRemaining = enteringIdle
+              ? IDLE_PHASE_MIN + Math.random() * IDLE_PHASE_RANGE
+              : WALK_PHASE_MIN + Math.random() * WALK_PHASE_RANGE;
+            // Ambient jump: grounded forward hop reusing the airborne (falling) path.
+            // Unreachable when motionGated (early return above), grounded only
+            // (lift === 0, !falling, !dragging via the held early return), facing
+            // direction only (no backward drift into a neighbor). Skipped when
+            // liftMax === 0 (short canvas, no vertical room).
+            if (enteringIdle && current.lift === 0 && !current.falling) {
+              const jumpDisplayHeight = current.sheet.frameHeight * current.scale;
+              const jumpLiftMax = Math.max(
+                0,
+                computeBaseline(canvasSize.height, jumpDisplayHeight) - jumpDisplayHeight,
+              );
+              if (jumpLiftMax > 0 && Math.random() < AMBIENT_JUMP_CHANCE) {
+                const gravity = GRAVITY_SCALE * canvasSize.height;
+                const jumpCap = Math.min(96 * (current.scale / 5), 0.35 * jumpLiftMax);
+                if (jumpCap > 0) {
+                  const jumpHeight = jumpCap * (0.5 + Math.random() * 0.5);
+                  const hopDirection = facing === "left" ? -1 : 1;
+                  return {
+                    ...current,
+                    state,
+                    frameIndex,
+                    x,
+                    phaseRemaining,
+                    frameAccumulator,
+                    lift: 0,
+                    falling: true,
+                    fallVelocity: -Math.sqrt(2 * gravity * jumpHeight),
+                    airborneXVelocity: hopDirection * (10 + Math.random() * 30),
+                  };
+                }
+              }
+            }
           }
 
           const walking = state.startsWith("walking");
           if (walking) {
-            const displayWidth = current.sheet.frameWidth * current.scale;
-            const maxX = Math.max(0, canvasSize.width - displayWidth);
-            if (maxX > 0) {
+            // Pace inside the sprite's own lane; turn at the lane edges so roamers
+            // never drift across the card into a neighbor and stack.
+            const laneLo = Math.min(current.laneMin, current.laneMax);
+            const laneHi = Math.max(current.laneMin, current.laneMax);
+            if (laneHi > laneLo) {
               const movingLeft = state === "walking-left";
-              x += (movingLeft ? -1 : 1) * current.speed * delta;
-              if (x <= 0) {
-                x = 0;
+              x = clamp(x + (movingLeft ? -1 : 1) * current.speed * delta, laneLo, laneHi);
+              if (x <= laneLo) {
+                x = laneLo;
                 state = "walking-right";
-              } else if (x >= maxX) {
-                x = maxX;
+              } else if (x >= laneHi) {
+                x = laneHi;
                 state = "walking-left";
               }
             } else {
-              x = 0;
+              x = laneLo;
             }
           }
 
@@ -504,7 +590,10 @@ export function CompanionCanvas({
         return (
           <div
             key={actor.companionId}
-            className={`pokeden-pixelated absolute touch-none select-none ${actor.dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            // Spawn fades in grounded (lift: 0, falling: false at build) — no drop-from-above on load/refresh.
+            // transition-none is REQUIRED: the fade utilities set transition: all 0.5s, which would interpolate
+            // background-position between frames and render the sprite sliced across two frames mid-walk.
+            className={`pokeden-pixelated fade-in absolute animate-in touch-none select-none transition-none duration-500 motion-reduce:animate-none ${actor.dragging ? "cursor-grabbing" : "cursor-grab"}`}
             onPointerDown={(event) => handleSpritePointerDown(event, actor.companionId)}
             onPointerMove={(event) => handleSpritePointerMove(event, actor.companionId)}
             onPointerUp={(event) => endSpriteDrag(event, actor.companionId)}

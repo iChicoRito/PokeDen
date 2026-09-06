@@ -50,7 +50,6 @@ type ScheduleDraft = {
   weekday: string;
   startTime: string;
   endTime: string;
-  room: string;
   label: string;
 };
 
@@ -74,7 +73,6 @@ function newScheduleDraft(): ScheduleDraft {
     weekday: String(new Date().getDay()),
     startTime: "09:00",
     endTime: "10:00",
-    room: "",
     label: "",
   };
 }
@@ -164,7 +162,6 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
         weekday: String(schedule.weekday),
         startTime: schedule.startTime,
         endTime: schedule.endTime,
-        room: schedule.room,
         label: schedule.label,
       })),
     });
@@ -197,7 +194,7 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
         startTime: schedule.startTime,
         endTime: schedule.endTime,
         label: schedule.label.trim(),
-        room: schedule.room.trim(),
+        room: "",
       })),
     };
     void run(() => {
@@ -337,40 +334,22 @@ export function SubjectsManager({ loading = false }: { loading?: boolean }) {
                           <Trash2 />
                         </Button>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Field>
-                          <FieldLabel htmlFor={`schedule-label-${schedule.id}`}>Label</FieldLabel>
-                          <Input
-                            id={`schedule-label-${schedule.id}`}
-                            placeholder="Algebra"
-                            value={schedule.label}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                schedules: current.schedules.map((item) =>
-                                  item.id === schedule.id ? { ...item, label: event.target.value } : item,
-                                ),
-                              }))
-                            }
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor={`schedule-room-${schedule.id}`}>Room</FieldLabel>
-                          <Input
-                            id={`schedule-room-${schedule.id}`}
-                            placeholder="B12"
-                            value={schedule.room}
-                            onChange={(event) =>
-                              setForm((current) => ({
-                                ...current,
-                                schedules: current.schedules.map((item) =>
-                                  item.id === schedule.id ? { ...item, room: event.target.value } : item,
-                                ),
-                              }))
-                            }
-                          />
-                        </Field>
-                      </div>
+                      <Field>
+                        <FieldLabel htmlFor={`schedule-label-${schedule.id}`}>Label</FieldLabel>
+                        <Input
+                          id={`schedule-label-${schedule.id}`}
+                          placeholder="Algebra"
+                          value={schedule.label}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              schedules: current.schedules.map((item) =>
+                                item.id === schedule.id ? { ...item, label: event.target.value } : item,
+                              ),
+                            }))
+                          }
+                        />
+                      </Field>
                       <div className="grid gap-4 sm:grid-cols-3">
                         <Field>
                           <FieldLabel htmlFor={`schedule-day-${schedule.id}`}>Day</FieldLabel>

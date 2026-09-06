@@ -152,7 +152,7 @@ export function CompanionsSkeleton() {
 
 export function ExamDetailSkeleton() {
   return (
-    <PageSkeleton maxWidth="max-w-4xl" label="Loading exam">
+    <PageSkeleton maxWidth="max-w-7xl" label="Loading exam">
       <Skeleton className="h-8 w-24" />
       <div className="space-y-3">
         <Skeleton className="h-10 w-72" />

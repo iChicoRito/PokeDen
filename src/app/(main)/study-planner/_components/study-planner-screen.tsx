@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { TimePicker } from "@/components/ui/time-picker";
 import { getStudySessionProgress } from "@/features/pokeden/derivations";
 import type { StudySession } from "@/features/pokeden/domain";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
@@ -363,23 +365,11 @@ export function StudyPlannerScreen({ loading = false }: { loading?: boolean }) {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="grid gap-2">
                 <Label htmlFor="session-date">Date</Label>
-                <Input
-                  id="session-date"
-                  type="date"
-                  value={draft.date}
-                  onChange={(event) => updateDraft("date", event.target.value)}
-                  required
-                />
+                <DatePicker id="session-date" value={draft.date} onChange={(value) => updateDraft("date", value)} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="session-time">Time</Label>
-                <Input
-                  id="session-time"
-                  type="time"
-                  value={draft.time}
-                  onChange={(event) => updateDraft("time", event.target.value)}
-                  required
-                />
+                <TimePicker id="session-time" value={draft.time} onChange={(value) => updateDraft("time", value)} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="session-duration">Duration (minutes)</Label>

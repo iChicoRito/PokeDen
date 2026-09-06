@@ -255,7 +255,7 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
 
           <Tabs defaultValue="overview">
             <div className="overflow-x-auto pb-2">
-              <TabsList className="min-w-max justify-start" variant="line" aria-label="Subject sections">
+              <TabsList className="min-w-max justify-start" aria-label="Subject sections">
                 <TabsTrigger value="overview">
                   <LayoutDashboard /> Overview
                 </TabsTrigger>
@@ -307,9 +307,6 @@ export function SubjectDetailDialog({ subject, open, onOpenChange }: SubjectDeta
                                 {" · "}
                                 {schedule.startTime}–{schedule.endTime}
                               </div>
-                              {schedule.room ? (
-                                <div className="text-muted-foreground text-xs">{schedule.room}</div>
-                              ) : null}
                             </div>
                           </div>
                         ))}

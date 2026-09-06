@@ -55,6 +55,7 @@ export function ExamDetailScreen() {
   const [resultOpen, setResultOpen] = useState(false);
   const [score, setScore] = useState("");
   const [maxScore, setMaxScore] = useState("100");
+  const [scoreError, setScoreError] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const exam = useMemo(() => data.exams.find((item) => item.id === params.examId), [data.exams, params.examId]);
@@ -63,7 +64,7 @@ export function ExamDetailScreen() {
 
   if (!exam) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-start gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-start gap-6 p-4 sm:p-6 lg:p-8">
         <Button variant="ghost" asChild>
           <Link href="/exams">
             <ArrowLeft /> Exams
@@ -105,6 +106,12 @@ export function ExamDetailScreen() {
       toast.error("Enter a valid score.");
       return;
     }
+    if (scoreValue > maxValue) {
+      setScoreError(true);
+      toast.error("Score cannot exceed max score.");
+      return;
+    }
+    setScoreError(false);
     void run(() => {
       actions.recordExamResult(exam.id, scoreValue, maxValue);
       toast.success("Result recorded.");
@@ -114,7 +121,7 @@ export function ExamDetailScreen() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-3">
         <Button variant="ghost" className="w-fit" asChild>
           <Link href="/exams">
@@ -150,6 +157,7 @@ export function ExamDetailScreen() {
               onClick={() => {
                 setScore(exam.result ? String(exam.result.score) : "");
                 setMaxScore(exam.result ? String(exam.result.maxScore) : "100");
+                setScoreError(false);
                 setResultOpen(true);
               }}
             >
@@ -303,8 +311,18 @@ export function ExamDetailScreen() {
                   type="number"
                   min={0}
                   value={score}
-                  onChange={(event) => setScore(event.target.value)}
+                  aria-invalid={scoreError}
+                  aria-describedby={scoreError ? "result-score-error" : undefined}
+                  onChange={(event) => {
+                    setScore(event.target.value);
+                    if (scoreError) setScoreError(false);
+                  }}
                 />
+                {scoreError ? (
+                  <p id="result-score-error" className="text-destructive text-sm" role="alert">
+                    Score cannot exceed max score.
+                  </p>
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="result-max">Max score</FieldLabel>
@@ -313,7 +331,10 @@ export function ExamDetailScreen() {
                   type="number"
                   min={1}
                   value={maxScore}
-                  onChange={(event) => setMaxScore(event.target.value)}
+                  onChange={(event) => {
+                    setMaxScore(event.target.value);
+                    if (scoreError) setScoreError(false);
+                  }}
                 />
               </Field>
             </div>
@@ -322,7 +343,7 @@ export function ExamDetailScreen() {
             <Button variant="outline" onClick={() => setResultOpen(false)}>
               Cancel
             </Button>
-            <LoadingButton loading={isPending} loadingLabel="Saving…" onClick={submitResult}>
+            <LoadingButton loading={isPending} loadingLabel="Saving…" onClick={submitResult} disabled={scoreError}>
               Save result
             </LoadingButton>
           </DialogFooter>

@@ -978,6 +978,17 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           wipePending,
         });
         if (action === "pull" && remote !== null) {
+          // Never clobber a locally-running timer with a different/idle remote. Last-write-wins on
+          // updatedAt cannot order wall-clock timer state (updatedAt only moves on mutations), so a
+          // remote edit from another tab/device would otherwise read as "newer" and destroy the
+          // running session on refresh. Re-read fresh state: `local` was captured before the pull
+          // await and may be stale if the timer mutated during the network round-trip.
+          const freshLocal = store.getState().data;
+          const freshTimer = freshLocal.activeTimer;
+          const remoteTimer = remote.activeTimer;
+          const isSameRunningTimer =
+            freshTimer?.status === "running" && remoteTimer?.status === "running" && freshTimer.id === remoteTimer.id;
+          if (freshTimer?.status === "running" && !isSameRunningTimer) return;
           try {
             savePokeDenData(remote); // validate + persist; throws PokeDenStorageError on invalid
           } catch {
@@ -986,7 +997,9 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           applyStampedAttributes(remote.companionPreferences);
           store.setState({ data: remote, isSaving: false, storageError: null });
         } else if (action === "push") {
-          const ok = await pushSnapshot(local);
+          // Push the freshest snapshot, not the pre-pull capture, so a timer mutation during the
+          // pull round-trip is not lost on the cloud row.
+          const ok = await pushSnapshot(store.getState().data);
           if (ok && wipePending) clearPokeDenWipePending();
         }
         // action === "none": nothing to do
