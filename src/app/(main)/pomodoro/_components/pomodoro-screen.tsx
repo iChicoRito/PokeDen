@@ -209,9 +209,9 @@ export function PomodoroScreen() {
     <div
       className={
         focusLayout
-          ? // Fixed viewport height + overflow-hidden keep the card flush with the
-            // viewport bottom edge (and keep the vertical scrollbar away).
-            "relative flex h-svh w-full flex-col items-center gap-6 overflow-hidden"
+          ? // Fixed viewport height + overflow-hidden keep the vertical scrollbar away;
+            // regular page padding keeps the card from hugging the viewport edges.
+            "relative flex h-svh w-full flex-col items-center gap-6 overflow-hidden p-4 sm:p-6 lg:p-8"
           : "mx-auto flex w-full max-w-7xl flex-col items-center gap-6 p-4 sm:p-6 lg:p-8"
       }
     >
@@ -264,9 +264,9 @@ export function PomodoroScreen() {
             // pointer events; interactive rows below opt back in with pointer-events-auto.
             "pointer-events-none relative z-10 flex flex-col items-center gap-6 py-10",
             timer ? "pb-24" : "pb-16",
-            // Focus layout: top-aligned compact content leaves the lower card area to
-            // the floating dock and the sprites' resting zone above the ground strip.
-            focusLayout && "flex-1 justify-start gap-4 pt-8 pb-0",
+            // Focus layout: centered content in the tall card; the dock and progress
+            // bar stay in normal flow below the card, above the sprites' ground strip.
+            focusLayout && "flex-1 justify-center",
           )}
         >
           {timer ? (
@@ -405,32 +405,14 @@ export function PomodoroScreen() {
       </Card>
 
       {timer ? (
-        <div
-          className={cn(
-            "flex w-full justify-center",
-            // In focus mode the progress bar overlays the card's bottom area so the
-            // card itself can own the full viewport height.
-            focusLayout && "pointer-events-none absolute inset-x-0 bottom-3 z-20 px-6",
-          )}
-        >
+        <div className="flex w-full justify-center">
           <div className="h-1 w-full max-w-3xl overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
       ) : null}
 
-      {companionVisible ? (
-        <div
-          className={cn(
-            "w-full",
-            // In focus mode the dock floats above the sprites' resting zone so it
-            // never covers the ground strip where companions are grabbed.
-            focusLayout && "absolute inset-x-0 bottom-24 z-20 px-4 sm:px-6",
-          )}
-        >
-          <CompanionDock />
-        </div>
-      ) : null}
+      {companionVisible ? <CompanionDock /> : null}
     </div>
   );
 }

@@ -26,10 +26,13 @@ type Actor = {
   lift: number; // px above the ground baseline; 0 = resting on the ground
   falling: boolean;
   fallVelocity: number; // px/s, positive = moving down, negative = bounce rebound
+  airborneXVelocity: number; // px/s horizontal velocity while airborne (throw momentum)
   dragging: boolean;
   dragPointerId: number | null;
   dragOffsetX: number; // pointer→sprite-left offset at grab, canvas px
   dragOffsetY: number; // pointer→sprite-top offset at grab, canvas px
+  // Throw physics: short pointer-position history (newest last) sampled in endSpriteDrag.
+  pointerHistory: Array<{ x: number; y: number; t: number }>;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -41,6 +44,10 @@ const MAX_FALL_SPEED = 1200; // px/s terminal velocity; with the 0.1s delta clam
 const BOUNCE_RESTITUTION = 0.3; // rebound keeps 30% of impact speed
 const BOUNCE_SETTLE_SPEED = 150; // px/s; impacts slower than this settle instead of bouncing
 const GROUND_SETTLE_PX = 12; // release with feet within this distance of the ground settles instantly
+const THROW_VELOCITY_SCALE = 1.15; // pointer px/s → released momentum px/s, slight exaggeration for game feel
+const MAX_THROW_SPEED = 1600; // px/s cap per axis so flings stay inside the card
+const THROW_SAMPLE_MS = 90; // velocity window: average pointer travel over the last 90ms
+const THROW_MIN_SPEED = 120; // px/s; slower releases count as plain drops, not throws
 
 function computeBaseline(containerHeight: number, displayHeight: number): number {
   const desiredBaseline = containerHeight - 10;
@@ -158,10 +165,12 @@ export function CompanionCanvas({
         lift: old && !motionGated ? clamp(old.lift, 0, liftMax) : 0,
         falling: old ? old.falling && !motionGated : false,
         fallVelocity: old && !motionGated ? old.fallVelocity : 0,
+        airborneXVelocity: old && !motionGated ? old.airborneXVelocity : 0,
         dragging: old?.dragging ?? false,
         dragPointerId: old?.dragPointerId ?? null,
         dragOffsetX: old?.dragOffsetX ?? 0,
         dragOffsetY: old?.dragOffsetY ?? 0,
+        pointerHistory: old?.pointerHistory ?? [],
       };
     });
 
@@ -186,7 +195,9 @@ export function CompanionCanvas({
       dragPointerId: null,
       falling: false,
       fallVelocity: 0,
+      airborneXVelocity: 0,
       lift: 0,
+      pointerHistory: [],
     }));
     setActors(actorsRef.current);
   }, [visible]);
@@ -215,6 +226,8 @@ export function CompanionCanvas({
       dragOffsetY: point.y - Math.max(0, baseline - displayHeight - actor.lift),
       falling: false, // catching a falling sprite mid-air freezes it in the hand
       fallVelocity: 0,
+      airborneXVelocity: 0,
+      pointerHistory: [{ x: point.x, y: point.y, t: event.timeStamp }],
     });
   };
 
@@ -233,6 +246,10 @@ export function CompanionCanvas({
     updateActor(companionId, {
       x: clamp(point.x - actor.dragOffsetX, 0, maxX),
       lift: clamp(baseline - displayHeight - (point.y - actor.dragOffsetY), 0, liftMax),
+      pointerHistory: [
+        ...actor.pointerHistory.filter((sample) => event.timeStamp - sample.t <= THROW_SAMPLE_MS),
+        { x: point.x, y: point.y, t: event.timeStamp },
+      ],
     });
   };
 
@@ -243,19 +260,52 @@ export function CompanionCanvas({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    const settle = motionGated || actor.lift <= GROUND_SETTLE_PX;
+
+    // Throw velocity: average pointer travel over the recent sample window, so a fling
+    // carries momentum while a slow grab-and-drop releases in place. Pointer coords are
+    // canvas-space (toCanvasPoint in handleSpritePointerMove), so +y is downward.
+    let throwX = 0;
+    let throwY = 0;
+    const recent = actor.pointerHistory.filter((sample) => event.timeStamp - sample.t <= THROW_SAMPLE_MS);
+    const first = recent[0];
+    const last = recent[recent.length - 1];
+    if (first && last && last.t > first.t) {
+      const span = (last.t - first.t) / 1000;
+      throwX = ((last.x - first.x) / span) * THROW_VELOCITY_SCALE;
+      throwY = ((last.y - first.y) / span) * THROW_VELOCITY_SCALE;
+      const speed = Math.hypot(throwX, throwY);
+      if (speed > MAX_THROW_SPEED) {
+        throwX *= MAX_THROW_SPEED / speed;
+        throwY *= MAX_THROW_SPEED / speed;
+      }
+    }
+
+    const groundLevel = actor.lift <= GROUND_SETTLE_PX;
+    const thrown = Math.hypot(throwX, throwY) >= THROW_MIN_SPEED;
+    // Throws animate even under the motion gate: the fall is direct feedback to the
+    // user's own fling, not ambient motion. Plain drops still snap when gated.
+    const settle = !thrown && (motionGated || groundLevel);
+    // A ground-level horizontal fling pops up slightly; otherwise it would land on the
+    // first tick and the momentum would never carry.
+    const thrownLift = groundLevel ? Math.max(actor.lift, 16) : actor.lift;
     updateActor(companionId, {
       dragging: false,
       dragPointerId: null,
       falling: !settle,
-      fallVelocity: 0,
-      lift: settle ? 0 : actor.lift,
+      // Sign convention: positive = downward, negative = upward arc. An upward fling
+      // rises before gravity pulls it back down.
+      fallVelocity: settle ? 0 : throwY,
+      airborneXVelocity: settle ? 0 : throwX,
+      lift: settle ? 0 : thrownLift,
+      pointerHistory: [],
     });
   };
 
-  // One loop owns behavior phases, horizontal movement, and sprite frame advancement for all actors.
+  // One loop owns behavior phases, horizontal movement, sprite frame advancement, and
+  // airborne physics (falls and throws) for all actors. Walk/idle behavior stays
+  // motion-gated, but the loop itself must run while gated so thrown sprites still fall.
   useEffect(() => {
-    if (!mounted || !visible || motionGated || canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    if (!mounted || !visible || canvasSize.width <= 0 || canvasSize.height <= 0) return;
 
     let active = true;
     let raf = 0;
@@ -282,12 +332,41 @@ export function CompanionCanvas({
           if (current.falling) {
             const gravity = GRAVITY_SCALE * canvasSize.height; // canvasSize.height is already an effect dep
             const fallVelocity = Math.min(MAX_FALL_SPEED, current.fallVelocity + gravity * delta);
-            const lift = current.lift - fallVelocity * delta;
+            const displayWidth = current.sheet.frameWidth * current.scale;
+            const maxX = Math.max(0, canvasSize.width - displayWidth);
+            const displayHeight = current.sheet.frameHeight * current.scale;
+            const liftMax = Math.max(0, computeBaseline(canvasSize.height, displayHeight) - displayHeight);
+
+            // Horizontal throw momentum with wall bounces (restitution, no friction mid-air).
+            let x = current.x + current.airborneXVelocity * delta;
+            let airborneXVelocity = current.airborneXVelocity;
+            if (x <= 0) {
+              x = 0;
+              airborneXVelocity = Math.abs(airborneXVelocity) * BOUNCE_RESTITUTION;
+            } else if (x >= maxX) {
+              x = maxX;
+              airborneXVelocity = -Math.abs(airborneXVelocity) * BOUNCE_RESTITUTION;
+            }
+
+            // Vertical motion; the ceiling clamps the arc (head bonk stops upward travel).
+            const lift = clamp(current.lift - fallVelocity * delta, 0, liftMax);
+            const ceilingHit = current.lift >= liftMax && fallVelocity < 0;
+
+            if (ceilingHit) {
+              return { ...current, lift: liftMax, fallVelocity: 0, x, airborneXVelocity };
+            }
             if (lift > 0) {
-              return { ...current, lift, fallVelocity }; // airborne; frame and x held
+              return { ...current, lift, fallVelocity, x, airborneXVelocity }; // airborne; frame held
             }
             if (fallVelocity > BOUNCE_SETTLE_SPEED) {
-              return { ...current, lift: 0, fallVelocity: -fallVelocity * BOUNCE_RESTITUTION }; // bounce upward
+              // Ground bounce: restitution on both axes, friction damps horizontal momentum.
+              return {
+                ...current,
+                lift: 0,
+                fallVelocity: -fallVelocity * BOUNCE_RESTITUTION,
+                airborneXVelocity: airborneXVelocity * BOUNCE_RESTITUTION,
+                x,
+              };
             }
             // land: resume idle facing the last direction
             const facing = current.state.endsWith("left") ? "left" : "right";
@@ -297,11 +376,17 @@ export function CompanionCanvas({
               lift: 0,
               fallVelocity: 0,
               falling: false,
+              airborneXVelocity: 0,
+              x,
               state,
               frameIndex: current.sheet.states[state].from,
               frameAccumulator: 0,
               phaseRemaining: 2 + Math.random() * 4,
             };
+          }
+
+          if (motionGated) {
+            return current; // gated: ambient walk/idle frozen; only throws (handled above) animate
           }
 
           let state = current.state;
