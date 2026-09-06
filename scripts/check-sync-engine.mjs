@@ -1,13 +1,9 @@
 // T-18 T13: sync-engine contract (Node built-in runner, no new deps).
 // RED first: src/lib/sync/sync-engine.ts does not exist yet.
+
+import { chooseSyncAction, enqueuePendingPush, shouldPush, takePendingPush } from "../src/lib/sync/sync-engine.ts";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  chooseSyncAction,
-  enqueuePendingPush,
-  shouldPush,
-  takePendingPush,
-} from "../src/lib/sync/sync-engine.ts";
 
 const older = { updatedAt: "2026-01-01T00:00:00.000Z" };
 const newer = { updatedAt: "2026-06-01T00:00:00.000Z" };

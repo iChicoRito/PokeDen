@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { PawPrint, Sparkles } from "lucide-react";
+import { PawPrint } from "lucide-react";
 
 import {
   Sidebar,
@@ -33,9 +33,6 @@ export function PokeDenSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip={APP_CONFIG.name}>
               <Link href="/dashboard">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Sparkles aria-hidden="true" className="size-4" />
-                </span>
                 <span className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold">{APP_CONFIG.name}</span>
                   <span className="truncate text-muted-foreground text-xs">Study workspace</span>

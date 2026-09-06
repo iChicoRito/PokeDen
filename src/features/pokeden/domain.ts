@@ -353,3 +353,22 @@ export type TaskUpdateInput = Partial<Omit<Task, "id" | "createdAt" | "updatedAt
 export type StudySessionUpdateInput = Partial<Omit<StudySession, "id" | "createdAt" | "updatedAt">>;
 export type NoteUpdateInput = Partial<Omit<Note, "id" | "createdAt" | "updatedAt">>;
 export type ExamUpdateInput = Partial<Omit<Exam, "id" | "createdAt" | "updatedAt">>;
+
+/**
+ * True when a snapshot holds no real user content yet — the auto-seeded shape
+ * created on a fresh install or after a full reset (see repository.client.ts).
+ * The sync engine uses this so a populated cloud row wins over an empty local
+ * seed on a brand-new device.
+ */
+export function isPristineSnapshot(data: PokeDenData): boolean {
+  return (
+    !data.setupCompleted &&
+    data.subjects.length === 0 &&
+    data.tasks.length === 0 &&
+    data.studySessions.length === 0 &&
+    data.notes.length === 0 &&
+    data.exams.length === 0 &&
+    data.focusSessions.length === 0 &&
+    data.grades.length === 0
+  );
+}

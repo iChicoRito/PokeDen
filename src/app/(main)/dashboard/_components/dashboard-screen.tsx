@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { ArrowRight, CalendarDays, GraduationCap, ListTodo, Play, Sparkles, X } from "lucide-react";
+import { ArrowRight, CalendarDays, GraduationCap, ListTodo, Play, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/app/(main)/_components/page-header";
@@ -13,7 +13,7 @@ import { DashboardSkeleton } from "@/app/(main)/_components/page-skeletons";
 import { LoadingButton } from "@/components/loading-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
 import {
   getCompletedTaskCount,
@@ -139,9 +139,6 @@ export function DashboardScreen() {
             <CardContent className="flex flex-col items-start gap-4 p-6">
               <div className="flex w-full items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="pokeden-chip size-10 rounded-xl">
-                    <Sparkles className="size-5" aria-hidden="true" />
-                  </div>
                   <div>
                     <div className="font-medium">What&apos;s next?</div>
                     <p className="mt-0.5 text-sm text-muted-foreground">
@@ -166,9 +163,6 @@ export function DashboardScreen() {
         ) : null}
         <Empty className="min-h-80 border">
           <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Sparkles />
-            </EmptyMedia>
             <EmptyTitle>Your Den is ready. Add your first task or plan a study session.</EmptyTitle>
             <EmptyDescription>Start small — one task or one focused session is enough.</EmptyDescription>
           </EmptyHeader>
@@ -220,9 +214,6 @@ export function DashboardScreen() {
         <Card className="border-primary/30">
           <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="pokeden-chip size-10 rounded-xl">
-                <Sparkles className="size-5" aria-hidden="true" />
-              </div>
               <div>
                 <div className="font-medium">Welcome aboard!</div>
                 <p className="mt-0.5 text-sm text-muted-foreground">

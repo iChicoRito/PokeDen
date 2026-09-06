@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
 
-import { PokeDenProvider } from "@/features/pokeden/pokeden-provider";
 import { SIDEBAR_COLLAPSIBLE_VALUES, SIDEBAR_VARIANT_VALUES } from "@/lib/preferences/layout";
 import { getPreference } from "@/server/server-actions";
 
@@ -18,12 +17,10 @@ export default async function MainLayout({ children }: Readonly<{ children: Reac
   ]);
 
   return (
-    <PokeDenProvider>
-      <SetupGate>
-        <PokeDenShell defaultOpen={defaultOpen} variant={variant} collapsible={collapsible}>
-          {children}
-        </PokeDenShell>
-      </SetupGate>
-    </PokeDenProvider>
+    <SetupGate>
+      <PokeDenShell defaultOpen={defaultOpen} variant={variant} collapsible={collapsible}>
+        {children}
+      </PokeDenShell>
+    </SetupGate>
   );
 }

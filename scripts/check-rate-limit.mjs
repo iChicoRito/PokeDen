@@ -1,7 +1,6 @@
 // T-18 T11: rate-limiter contract (Node built-in runner, no new deps).
 // RED first: src/lib/rate-limit.ts does not exist yet.
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+
 import {
   checkRateLimit,
   SYNC_PULL_LIMIT,
@@ -9,6 +8,8 @@ import {
   SYNC_PUSH_LIMIT,
   SYNC_PUSH_WINDOW_MS,
 } from "../src/lib/rate-limit.ts";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 describe("rate limiter", () => {
   it("exports push 30/60s and pull 60/60s budgets", () => {
