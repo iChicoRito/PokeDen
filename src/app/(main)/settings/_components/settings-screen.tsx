@@ -28,9 +28,12 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { cancelPendingPokeDenPush, clearPokeDenWipePending } from "@/data/pokeden/repository.client";
+import { useAuth } from "@/features/auth/auth-provider";
 import { COMPANIONS, resolveCompanionId } from "@/features/pokeden/companions";
 import { usePokeDenStore } from "@/features/pokeden/pokeden-provider";
 import { usePendingAction } from "@/hooks/use-pending-action";
+import { deleteSnapshot } from "@/lib/sync/sync-client";
 import { cn } from "@/lib/utils";
 
 import { AccountCard } from "./account-card";
@@ -42,6 +45,8 @@ export function SettingsScreen() {
   const storageError = usePokeDenStore((state) => state.storageError);
   const actions = usePokeDenStore((state) => state.actions);
   const { isPending, run } = usePendingAction();
+  const { session, user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && !!session && !!user;
 
   const [profile, setProfile] = useState({ name: "", course: "" });
   const [confirmClear, setConfirmClear] = useState(false);
@@ -319,7 +324,7 @@ export function SettingsScreen() {
           <Button variant="outline" onClick={() => setConfirmClear(true)}>
             <Trash2 /> Clear academic data
           </Button>
-          <Button variant="destructive" onClick={() => setConfirmResetAll(true)}>
+          <Button variant="destructive" disabled={authLoading} onClick={() => setConfirmResetAll(true)}>
             <Trash2 /> Full reset
           </Button>
         </CardContent>
@@ -363,31 +368,70 @@ export function SettingsScreen() {
       <AlertDialog open={confirmResetAll} onOpenChange={setConfirmResetAll}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Full reset?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isAuthenticated ? "Delete all data, including your cloud backup?" : "Full reset this device?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Clears everything and returns you to the first-time onboarding experience.
+              {isAuthenticated ? (
+                <>
+                  This permanently erases your account-linked database data (your synced PokeDen snapshot) AND the saved
+                  data on this device. This cannot be undone.
+                  {user?.email ? ` Signed in as ${user.email}.` : null}
+                </>
+              ) : (
+                "Deletes saved data stored only on this device and returns you to onboarding. You are not signed in, so there is no account backup to delete."
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={authLoading}
               onClick={(event) => {
                 event.preventDefault();
-                void run(() => actions.resetAllData())
+                void run(async () => {
+                  if (!isAuthenticated) {
+                    actions.resetAllData();
+                    cancelPendingPokeDenPush();
+                    clearPokeDenWipePending();
+                    return;
+                  }
+                  cancelPendingPokeDenPush();
+                  const result = await deleteSnapshot();
+                  if (!result.ok) {
+                    throw new Error(result.status === 401 ? "session-expired" : "cloud-delete-failed");
+                  }
+                  actions.resetAllData();
+                  cancelPendingPokeDenPush();
+                  clearPokeDenWipePending();
+                })
                   .then(() => {
-                    toast.success("Everything reset.");
+                    toast.success(isAuthenticated ? "Local and cloud data deleted." : "Device data reset.");
                     router.replace("/onboarding");
                   })
-                  .catch(() => toast.error("Could not reset."));
+                  .catch((error: unknown) => {
+                    setConfirmResetAll(false);
+                    if (!isAuthenticated) {
+                      toast.error("Could not reset.");
+                      return;
+                    }
+                    if (error instanceof Error && error.message === "session-expired") {
+                      toast.error("Session expired — sign in again; nothing was deleted.");
+                    } else {
+                      toast.error("Cloud delete failed — nothing was deleted. Please retry.");
+                    }
+                  });
               }}
             >
               {isPending ? (
                 <>
                   <Spinner className="size-4" /> Resetting…
                 </>
+              ) : isAuthenticated ? (
+                "Yes, delete everything"
               ) : (
-                "Reset everything"
+                "Reset this device"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
