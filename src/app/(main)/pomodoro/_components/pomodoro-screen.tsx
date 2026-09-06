@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ChevronDown, Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
+import { Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/app/(main)/_components/page-header";
@@ -374,6 +374,36 @@ export function PomodoroScreen() {
                 >
                   <RotateCcw /> <span>Reset</span>
                 </LoadingButton>
+                {/* Mobile-only break switch: lives in the control row (above the sprites)
+                    and opens upward so neither trigger nor menu covers the ground strip. */}
+                <span className="sm:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        aria-label="Switch to a break"
+                        className="max-sm:w-9 max-sm:px-0"
+                      >
+                        <Coffee />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" side="top">
+                      <DropdownMenuItem
+                        disabled={pendingAction === "start-short-break"}
+                        onClick={() => start("short-break")}
+                      >
+                        <Coffee /> Short break
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={pendingAction === "start-long-break"}
+                        onClick={() => start("long-break")}
+                      >
+                        <Coffee /> Long break
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </span>
               </div>
               <div className="pointer-events-auto hidden flex-wrap items-center justify-center gap-2 sm:flex">
                 <LoadingButton
@@ -394,30 +424,6 @@ export function PomodoroScreen() {
                 >
                   <Coffee /> Long break
                 </LoadingButton>
-              </div>
-              <div className="pointer-events-auto flex justify-center sm:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="lg" aria-label="Switch to a break">
-                      <Coffee />
-                      <ChevronDown />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center">
-                    <DropdownMenuItem
-                      disabled={pendingAction === "start-short-break"}
-                      onClick={() => start("short-break")}
-                    >
-                      <Coffee /> Short break
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={pendingAction === "start-long-break"}
-                      onClick={() => start("long-break")}
-                    >
-                      <Coffee /> Long break
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </>
           ) : (
