@@ -2,14 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
+import { ChevronDown, Coffee, Pause, Play, RotateCcw, Square } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/app/(main)/_components/page-header";
 import { PomodoroSkeleton } from "@/app/(main)/_components/page-skeletons";
 import { LoadingButton } from "@/components/loading-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getActiveTimerElapsedSeconds, getActiveTimerRemainingSeconds } from "@/features/pokeden/derivations";
@@ -313,51 +320,62 @@ export function PomodoroScreen() {
                   <LoadingButton
                     size="lg"
                     variant="outline"
+                    aria-label="Pause"
                     loading={pendingAction === "pause"}
                     loadingLabel="Pausing…"
+                    // Mobile: icon-only (labels hidden, square width) to declutter the card.
+                    className="max-sm:w-9 max-sm:px-0 max-sm:[&>span]:hidden"
                     onClick={pause}
                   >
-                    <Pause /> Pause
+                    <Pause /> <span>Pause</span>
                   </LoadingButton>
                 ) : timer.status === "paused" ? (
                   <LoadingButton
                     size="lg"
+                    aria-label="Resume"
                     loading={pendingAction === "resume"}
                     loadingLabel="Resuming…"
+                    className="max-sm:w-9 max-sm:px-0 max-sm:[&>span]:hidden"
                     onClick={resume}
                   >
-                    <Play /> Resume
+                    <Play /> <span>Resume</span>
                   </LoadingButton>
                 ) : (
                   <LoadingButton
                     size="lg"
+                    aria-label={`Start ${modeLabel(selectedMode).toLowerCase()}`}
                     loading={pendingAction === `start-${selectedMode}`}
                     loadingLabel="Starting…"
+                    className="max-sm:w-9 max-sm:px-0 max-sm:[&>span]:hidden"
                     onClick={() => start(selectedMode)}
                   >
-                    <Play /> Start
+                    <Play /> <span>Start</span>
                   </LoadingButton>
                 )}
                 <LoadingButton
                   size="lg"
                   variant="outline"
+                  aria-label="Stop"
                   loading={pendingAction === "stop"}
                   loadingLabel="Stopping…"
+                  className="max-sm:w-9 max-sm:px-0 max-sm:[&>span]:hidden"
                   onClick={stop}
                 >
-                  <Square /> Stop
+                  <Square /> <span>Stop</span>
                 </LoadingButton>
                 <LoadingButton
                   size="lg"
                   variant="ghost"
+                  aria-label="Reset"
                   loading={pendingAction === "reset"}
                   loadingLabel="Resetting…"
+                  className="max-sm:w-9 max-sm:px-0 max-sm:[&>span]:hidden"
                   onClick={reset}
                 >
-                  <RotateCcw /> Reset
+                  <RotateCcw /> <span>Reset</span>
                 </LoadingButton>
               </div>
-              <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2">
+              <div className="pointer-events-auto hidden flex-wrap items-center justify-center gap-2 sm:flex">
                 <LoadingButton
                   variant="outline"
                   size="sm"
@@ -376,6 +394,30 @@ export function PomodoroScreen() {
                 >
                   <Coffee /> Long break
                 </LoadingButton>
+              </div>
+              <div className="pointer-events-auto flex justify-center sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="lg" aria-label="Switch to a break">
+                      <Coffee />
+                      <ChevronDown />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center">
+                    <DropdownMenuItem
+                      disabled={pendingAction === "start-short-break"}
+                      onClick={() => start("short-break")}
+                    >
+                      <Coffee /> Short break
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={pendingAction === "start-long-break"}
+                      onClick={() => start("long-break")}
+                    >
+                      <Coffee /> Long break
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           ) : (
