@@ -241,11 +241,17 @@ export function CompanionCanvas({
     const maxX = Math.max(0, canvasSize.width - displayWidth);
     const baseline = computeBaseline(canvasSize.height, displayHeight);
     const liftMax = Math.max(0, baseline - displayHeight);
+    // Face the drag direction: a 3px horizontal deadzone stops idle-frame flicker from jitter.
+    const deltaX = point.x - actor.dragOffsetX - actor.x;
+    const facing = deltaX > 3 ? "right" : deltaX < -3 ? "left" : actor.state.endsWith("left") ? "left" : "right";
+    const state: SpriteStateName = `idle-${facing}`;
     // Clamps: left ∈ [0, maxX]; lift ∈ [0, liftMax] ⟺ sprite top ≥ 0 and feet baseline ∈
     // [displayHeight, baseline] — the feet never sink below the ground strip nor rise past the top.
     updateActor(companionId, {
       x: clamp(point.x - actor.dragOffsetX, 0, maxX),
       lift: clamp(baseline - displayHeight - (point.y - actor.dragOffsetY), 0, liftMax),
+      state,
+      frameIndex: actor.state === state ? actor.frameIndex : actor.sheet.states[state].from,
       pointerHistory: [
         ...actor.pointerHistory.filter((sample) => event.timeStamp - sample.t <= THROW_SAMPLE_MS),
         { x: point.x, y: point.y, t: event.timeStamp },
