@@ -8,8 +8,13 @@ type FullscreenDocumentLike = {
   exitFullscreen?: () => Promise<void>;
 };
 
+/**
+ * Focus mode (hidden chrome, full-bleed timer card, no companion dock) applies
+ * only while the timer is running. Pausing deliberately returns the page to the
+ * normal view; resuming re-enters focus mode.
+ */
 export function isPomodoroFocusModeActive(status: PomodoroTimerStatus): boolean {
-  return status === "running" || status === "paused";
+  return status === "running";
 }
 
 export async function requestPomodoroFullscreen(documentLike: FullscreenDocumentLike): Promise<boolean> {

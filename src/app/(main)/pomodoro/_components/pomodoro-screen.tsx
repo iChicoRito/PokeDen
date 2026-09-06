@@ -177,7 +177,15 @@ export function PomodoroScreen() {
 
   const pause = () =>
     track("pause", () =>
-      run(() => actions.pauseTimer(), { minMs: 250 }).catch(() => toast.error("Could not pause the timer.")),
+      run(
+        () => {
+          actions.pauseTimer();
+          // Pause leaves focus mode: restore chrome via the shared predicate and
+          // exit browser fullscreen, mirroring stop/reset. Resume re-enters both.
+          void exitPomodoroFullscreen(document);
+        },
+        { minMs: 250 },
+      ).catch(() => toast.error("Could not pause the timer.")),
     );
 
   const resume = () => {
@@ -460,7 +468,9 @@ export function PomodoroScreen() {
         </div>
       ) : null}
 
-      {companionVisible ? <CompanionDock /> : null}
+      {/* The companion dock doubles as the companion-selection card: hidden while
+          the timer runs so focus mode stays uncluttered; visible when paused/idle. */}
+      {companionVisible && !focusLayout ? <CompanionDock /> : null}
     </div>
   );
 }
