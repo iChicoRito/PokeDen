@@ -271,6 +271,22 @@ export function notifyPokeDenSaved(data: PokeDenData): void {
   }
 }
 
+/**
+ * Cancels a pending debounced cloud push scheduled by notifyPokeDenSaved.
+ * Best-effort and never throws; a blocked timer or missing window must not
+ * break the reset flow. Does not touch localStorage.
+ */
+export function cancelPendingPokeDenPush(): void {
+  try {
+    if (pokeDenPushTimer !== null) {
+      clearTimeout(pokeDenPushTimer);
+      pokeDenPushTimer = null;
+    }
+  } catch {
+    // Best-effort: timer cancellation must never break the save path.
+  }
+}
+
 /** Records that the user deliberately wiped all data on this device (Full reset in Settings). */
 export function setPokeDenWipePending(): void {
   try {

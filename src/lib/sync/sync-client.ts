@@ -44,3 +44,25 @@ export async function pushSnapshot(data: PokeDenData): Promise<boolean> {
     return false;
   }
 }
+
+export type DeleteSnapshotResult = { ok: true } | { ok: false; status: number };
+
+/**
+ * DELETE /api/sync/snapshot → removes the owner's cloud row.
+ * Resolves { ok: true } only when the server accepted it (response.ok).
+ * Network failure, abort, or non-OK status resolves { ok: false, status }
+ * (status 0 = no response). Never throws.
+ */
+export async function deleteSnapshot(): Promise<DeleteSnapshotResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch("/api/sync/snapshot", { method: "DELETE", signal: controller.signal });
+    if (response.ok) return { ok: true };
+    return { ok: false, status: response.status };
+  } catch {
+    return { ok: false, status: 0 };
+  } finally {
+    clearTimeout(timer);
+  }
+}
