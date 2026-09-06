@@ -1357,3 +1357,17 @@ PokeDen is successful when a student can open the application and immediately un
 The companion should make the experience feel more personal and enjoyable while remaining secondary to the academic tools.
 
 > **PokeDen is a personal study space where students organize academic work, plan focused study sessions, and study alongside a companion.**
+
+---
+
+## 29. Sync & Accounts (Cloud)
+
+PokeDen is local-first. The offline source of truth is a single browser `localStorage` key `pokademia:pokeden:data:v1` holding the entire PokeDen dataset as one versioned, zod-validated JSON snapshot, with a backup key `pokademia:pokeden:backup:v1`; load/save handling lives in `src/data/pokeden/repository.client.ts`. The app remains fully usable offline.
+
+Cloud persistence runs on Supabase Postgres with exactly one table, `public.tbl_profiles`: one row per user holding the whole snapshot in a `snapshot jsonb` column plus a `snapshot_updated_at` timestamp, and row-level security restricts every row to its owner (schema in `supabase/migrations/0001_tbl_profiles.sql`). One table suffices because the app's data is document-shaped, sync is an atomic whole-snapshot exchange, and there are no server-side relational queries today. Authentication is Google OAuth producing a Supabase session held in cookies; OAuth only authenticates, and data never lives on Google infrastructure. Sync endpoints are `POST /api/sync/push` and `GET /api/sync/pull`, both rate-limited, with the push body capped at roughly 1,000,000 characters (about 1 MB); the decision logic is a pure engine in `src/lib/sync/sync-engine.ts`.
+
+- **Fresh device:** on a fresh install (empty local storage) whose cloud account already has data, the cloud snapshot is pulled down on the first load after sign-in; the local auto-seed never outranks existing cloud data.
+- **Full reset:** a signed-in Full reset (Settings → Danger zone → Full reset) records a local wipe-pending marker under key `pokademia:pokeden:wipe-pending:v1`; on the next sync the empty snapshot is pushed to the cloud and the marker clears, so a reload can never resurrect the old cloud data onto the reset device, and other devices converge to the reset through normal last-write-wins.
+- **Offline edits:** changes made while signed in but offline are pushed on the next launch once a session exists.
+- **Mount and hydration:** the data provider is mounted once at the root layout (`src/app/layout.tsx`), so mount-time sync runs once per page load and hydration gates the UI until the first sync settles when signed in, or resolves immediately when signed out or on sync failure.
+- **Known limitations:** conflicts resolve by whole-document last-write-wins on `updatedAt` when both sides have real content; true concurrent two-device editing is not supported; push payloads are capped around 1 MB.

@@ -9,10 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const src = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
-const stripComments = (s) =>
-  s
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/(^|[^:"'])\/\/.*$/gm, "$1");
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/.*$/gm, "$1");
 
 describe("rls contract", () => {
   it("migration creates tbl_profiles", () => {

@@ -383,9 +383,6 @@ export function OnboardingFlow() {
 
         {step === "welcome" ? (
           <section className="pokeden-step-enter space-y-8 py-14 text-center">
-            <div className="pokeden-chip mx-auto">
-              <Sparkles className="size-8" aria-hidden="true" />
-            </div>
             <div className="space-y-3">
               <h1
                 ref={headingRef}

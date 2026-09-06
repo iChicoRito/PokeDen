@@ -269,6 +269,16 @@ Apply these checks to onboarding, Settings, Subjects, Tasks, Study Planner, Note
 - [ ] Switch routes rapidly while saves, autosaves, and timer state changes occur. **Expected:** no stale write overwrites newer data, no unhandled error appears, and timer behavior follows the lifecycle rules.
 - [ ] Observe companion motion with large collections and while typing, scrolling, filtering, and running Pomodoro. **Expected:** academic interactions remain responsive and animation does not cause visible layout shifts or input lag.
 
+### Sync & accounts (cloud)
+
+- [ ] Sign in on a fresh device whose cloud account already has data. **Expected:** all cloud data arrives on the first load after sign-in with no empty-onboarding flash and no destructive push of the empty local state over the cloud data.
+- [ ] Make edits while signed in with the device offline, then relaunch online. **Expected:** the edits are pushed to the cloud on the next launch once a session exists, with no extra save action needed.
+- [ ] Perform a signed-in Full reset (Settings → Danger zone → Full reset). **Expected:** the cloud row becomes empty and reloading the reset device does not resurrect the old cloud data (the wipe-pending marker `pokademia:pokeden:wipe-pending:v1` is consumed on the next sync).
+- [ ] Sign in on a second fresh device after the Full reset above. **Expected:** the device lands in onboarding — the old cloud data does not return.
+- [ ] Use PokeDen while signed out. **Expected:** behavior is unchanged — hydration is immediate, localStorage remains authoritative, and no sync calls are made.
+- [ ] Load PokeDen signed in on a slow or throttled network. **Expected:** a loading state appears and the UI settles into the synced data; there is never a flash of empty onboarding followed later by the data appearing.
+- [ ] Re-run the Dashboard, Subjects, Tasks, Planner, and Calendar cross-module synchronization checks above. **Expected:** the local cross-module checks in this chapter still pass unchanged with sync in place.
+
 ---
 
 ## Five end-to-end journeys (R-24 / T-38)

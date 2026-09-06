@@ -6,6 +6,7 @@ import { createDemoPokeDenData } from "./demo-fixtures";
 export const POKEDEN_STORAGE_KEY = "pokademia:pokeden:data:v1";
 export const POKEDEN_BACKUP_KEY = "pokademia:pokeden:backup:v1";
 export const POKEDEN_RECOVERY_KEY = "pokademia:pokeden:recovery";
+export const POKEDEN_WIPE_PENDING_KEY = "pokademia:pokeden:wipe-pending:v1";
 
 export type StorageErrorCode = "unavailable" | "read-failed" | "write-failed" | "invalid-data";
 
@@ -267,5 +268,32 @@ export function notifyPokeDenSaved(data: PokeDenData): void {
     }, 1500);
   } catch {
     // Scheduling must never break the save path.
+  }
+}
+
+/** Records that the user deliberately wiped all data on this device (Full reset in Settings). */
+export function setPokeDenWipePending(): void {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(POKEDEN_WIPE_PENDING_KEY, new Date().toISOString());
+    }
+  } catch {
+    // Best-effort: a blocked storage area must not break the reset flow.
+  }
+}
+
+export function clearPokeDenWipePending(): void {
+  try {
+    if (typeof window !== "undefined") window.localStorage.removeItem(POKEDEN_WIPE_PENDING_KEY);
+  } catch {
+    // Best-effort.
+  }
+}
+
+export function isPokeDenWipePending(): boolean {
+  try {
+    return typeof window !== "undefined" && window.localStorage.getItem(POKEDEN_WIPE_PENDING_KEY) !== null;
+  } catch {
+    return false;
   }
 }

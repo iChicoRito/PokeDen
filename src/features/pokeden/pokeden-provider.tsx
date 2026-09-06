@@ -7,16 +7,21 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 
 import {
   clearPokeDenAcademicData,
+  clearPokeDenWipePending,
+  isPokeDenWipePending,
   loadPokeDenData,
   notifyPokeDenSaved,
   resetPokeDenDemo,
   savePokeDenData,
+  setPokeDenWipePending,
   subscribeToPokeDenStorage,
 } from "@/data/pokeden/repository.client";
 import { createClient } from "@/lib/supabase/client";
-import { chooseSyncAction } from "@/lib/sync/sync-engine";
+import { pullSnapshot, pushSnapshot, type PullResult } from "@/lib/sync/sync-client";
+import { resolveSyncAction } from "@/lib/sync/sync-engine";
 
 import { COMPANION_CATALOG, type CompanionId, resolveCompanionId } from "./companions";
+import { isPristineSnapshot } from "./domain";
 import type {
   ExamInput,
   ExamUpdateInput,
@@ -928,6 +933,7 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
           updatedAt: nowIso(),
         };
         savePokeDenData(fresh);
+        setPokeDenWipePending();
         applyStampedAttributes(fresh.companionPreferences);
         store.setState({ data: fresh, isSaving: false, storageError: null });
         notifyPokeDenSaved(fresh);
@@ -942,54 +948,56 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
   useEffect(() => {
     const state = store.getState();
     applyStampedAttributes(state.data.companionPreferences);
-    store.setState({ isHydrated: true });
     const unsubscribe = subscribeToPokeDenStorage((data) => {
       applyStampedAttributes(data.companionPreferences);
       store.setState({ data, isSaving: false, storageError: null });
     });
-    void (async () => {
+
+    const hydrate = () => store.setState({ isHydrated: true });
+    const SYNC_TIMEOUT_MS = 12_000;
+
+    const syncWork = async (): Promise<void> => {
       try {
         const supabase = createClient();
         if (!supabase) return;
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) return;
-        const response = await fetch("/api/sync/pull", { method: "GET" });
-        if (!response.ok) return;
-        const body = (await response.json()) as { snapshot: PokeDenData | null };
         const local = store.getState().data;
-        if (body.snapshot === null || body.snapshot === undefined) {
-          const hasLocalContent =
-            local.setupCompleted ||
-            local.subjects.length > 0 ||
-            local.tasks.length > 0 ||
-            local.studySessions.length > 0 ||
-            local.notes.length > 0 ||
-            local.exams.length > 0;
-          if (!hasLocalContent) return;
+        const localEmpty = isPristineSnapshot(local);
+        const wipePending = isPokeDenWipePending();
+        const pull: PullResult = await pullSnapshot();
+        if (pull.status === "error") return; // network trouble: keep local, retry next launch — never clobber
+        let remote: PokeDenData | null = null;
+        if (pull.status === "ok") {
+          // Authoritative cloud row exists (could itself be pristine after a prior wipe).
+          remote = pull.snapshot;
+        }
+        const action = resolveSyncAction(local, remote, {
+          localEmpty,
+          remoteEmpty: remote !== null && isPristineSnapshot(remote),
+          wipePending,
+        });
+        if (action === "pull" && remote !== null) {
           try {
-            await fetch("/api/sync/push", {
-              body: JSON.stringify({ snapshot: local, snapshotUpdatedAt: local.updatedAt }),
-              headers: { "content-type": "application/json" },
-              method: "POST",
-            });
+            savePokeDenData(remote); // validate + persist; throws PokeDenStorageError on invalid
           } catch {
-            // First-upload failure stays silent; debounced pushes retry later.
+            return; // finally hydrates with current local
           }
-          return;
+          applyStampedAttributes(remote.companionPreferences);
+          store.setState({ data: remote, isSaving: false, storageError: null });
+        } else if (action === "push") {
+          const ok = await pushSnapshot(local);
+          if (ok && wipePending) clearPokeDenWipePending();
         }
-        const action = chooseSyncAction(local, body.snapshot);
-        if (action !== "pull") return;
-        try {
-          savePokeDenData(body.snapshot);
-        } catch {
-          return;
-        }
-        applyStampedAttributes(body.snapshot.companionPreferences);
-        store.setState({ data: body.snapshot, isSaving: false, storageError: null });
+        // action === "none": nothing to do
       } catch {
         // Sync must never throw to the UI; the local cache remains authoritative.
       }
-    })();
+    };
+
+    void Promise.race([syncWork(), new Promise<void>((resolve) => setTimeout(resolve, SYNC_TIMEOUT_MS))])
+      .finally(hydrate);
+
     return unsubscribe;
   }, [store]);
 
