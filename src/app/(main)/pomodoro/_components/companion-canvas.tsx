@@ -498,6 +498,9 @@ export function CompanionCanvas({
         const top = Math.max(0, baseline - displayHeight - actor.lift);
         const stateRange = actor.sheet.states[actor.state];
         const displayedFrame = Math.min(stateRange.to, Math.max(stateRange.from, Math.floor(actor.frameIndex)));
+        // The companion the user picked stays on top when sprites overlap; dragged or
+        // falling sprites lift above them temporarily.
+        const isSelected = actor.companionId === selected;
         return (
           <div
             key={actor.companionId}
@@ -518,7 +521,7 @@ export function CompanionCanvas({
               backgroundRepeat: "no-repeat",
               transform: stateRange?.flip === true ? "scaleX(-1)" : undefined,
               pointerEvents: "auto", // opt-in escape from the container's pointerEvents: "none"
-              zIndex: actor.dragging || actor.falling ? 5 : undefined, // above siblings, below CardContent z-10
+              zIndex: actor.dragging || actor.falling ? 6 : isSelected ? 5 : undefined, // selected stays on top; active sprite above all, below CardContent z-10
             }}
           />
         );
