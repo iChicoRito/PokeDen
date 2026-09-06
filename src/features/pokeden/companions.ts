@@ -94,6 +94,7 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     personality: "cheerful",
     image: "/assets/profiles/gengar-profile.png",
     unlockStudyLevel: 2,
+    evolutions: [{ name: "Haunter", companionLevel: 5, studyLevel: 5 }],
   },
   {
     id: "pikachu",
@@ -103,6 +104,7 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     personality: "cheerful",
     image: "/assets/profiles/pickachu-profile.png",
     unlockStudyLevel: 2,
+    evolutions: [{ name: "Raichu", companionLevel: 5, studyLevel: 5 }],
   },
   {
     id: "snorlax",
@@ -112,6 +114,7 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     personality: "calm",
     image: "/assets/profiles/snorlax-profile.png",
     unlockStudyLevel: 3,
+    evolutions: [{ name: "Snorlax", companionLevel: 6, studyLevel: 6 }],
   },
   {
     id: "wigglypuff",

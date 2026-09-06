@@ -4,14 +4,17 @@ import type { CompanionId } from "@/features/pokeden/companions";
 export type SpriteSpecies =
   | "squirtle"
   | "wartortle"
+  | "blastoise"
   | "bulbasaur"
   | "ivysaur"
+  | "venusaur"
   | "charmander"
   | "charmeleon"
   | "charizard"
   | "gastly"
   | "haunter"
   | "munchlax"
+  | "snorlax"
   | "jigglypuff"
   | "wigglytuff"
   | "totodile"
@@ -70,6 +73,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  blastoise: {
+    species: "blastoise",
+    displayName: "Blastoise",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/blastoise/blastoise-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
   bulbasaur: {
     species: "bulbasaur",
     displayName: "Bulbasaur",
@@ -90,6 +108,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
     displayName: "Ivysaur",
     gender: "♂",
     sheetUrl: "/assets/sprites/bulbasaur/ivysaur-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 10,
+    states: {
+      "idle-left": { from: 0, to: 0 },
+      "idle-right": { from: 1, to: 1 },
+      "walking-left": { from: 2, to: 5 },
+      "walking-right": { from: 6, to: 9 },
+    },
+  },
+  venusaur: {
+    species: "venusaur",
+    displayName: "Venusaur",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/bulbasaur/venusaur-sheet.png",
     frameWidth: 28,
     frameHeight: 28,
     frameCount: 10,
@@ -180,6 +213,21 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
     displayName: "Munchlax",
     gender: "♂",
     sheetUrl: "/assets/sprites/snorlax/munchlax-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  snorlax: {
+    species: "snorlax",
+    displayName: "Snorlax",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/snorlax/snorlax-sheet.png",
     frameWidth: 28,
     frameHeight: 28,
     frameCount: 5,

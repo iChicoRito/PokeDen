@@ -33,30 +33,29 @@ FRAME_HEIGHT = 28
 FRAME_RGBA_BYTES = FRAME_WIDTH * FRAME_HEIGHT * 4
 
 # folder -> (species id, display name, source stem)
-# NOTE: bulbasaur/ivysaur.aseprite holds Bulbasaur art and bulbasaur/bulbasaur.aseprite
-# holds Ivysaur art (verified visually 2026-09-04) — the crossed stems below are
-# intentional, do not "fix" them.
+# Cross-named files (pixel-verified 2026-09-06: zero frame overlap between the
+# swapped sources, distinct palettes/silhouettes) — the stems below are
+# intentional, do not "fix" them:
+#   ivysaur.aseprite holds Bulbasaur art (green bulb)
+#   venosaur.aseprite holds Ivysaur art (pink bud)
+#   bulbasaur.aseprite holds Venusaur art (open flower)
+#   blastoise.aseprite holds real Blastoise art (bulkier than Wartortle, cannon
+#     visible in profile) — previously mislabeled as Wartortle and not exported
+#   snorlax.aseprite holds real Snorlax art — previously mislabeled as Munchlax
 SPECIES = [
     ("blastoise", "squirtle", "Squirtle", "squirtle"),
     ("blastoise", "wartortle", "Wartortle", "wartortle"),
-    # NOTE: blastoise/blastoise.aseprite holds Wartortle art (visually verified
-    # 2026-09-04: feather ears, no shell cannons), so it is intentionally NOT
-    # exported — the blastoise companion's phase-2 is the wartortle sheet above.
+    ("blastoise", "blastoise", "Blastoise", "blastoise"),
     ("bulbasaur", "bulbasaur", "Bulbasaur", "ivysaur"),
-    # NOTE: bulbasaur/bulbasaur.aseprite holds Ivysaur art (verified 2026-09-04),
-    # so the bulbasaur companion's phase-2 is the ivysaur sheet below.
-    ("bulbasaur", "ivysaur", "Ivysaur", "bulbasaur"),
-    # NOTE: bulbasaur/venosaur.aseprite holds Ivysaur art in all 20 frames
-    # (verified 2026-09-04) — no Venusaur art exists, so no phase-3 export.
+    ("bulbasaur", "ivysaur", "Ivysaur", "venosaur"),
+    ("bulbasaur", "venusaur", "Venusaur", "bulbasaur"),
     ("charizard", "charmander", "Charmander", "charmander"),
     ("charizard", "charmeleon", "Charmeleon", "charmeleon"),
     ("charizard", "charizard", "Charizard", "charizard"),
     ("gengar", "gastly", "Gastly", "gastly"),
     ("gengar", "haunter", "Haunter", "haunter"),
-    # NOTE: snorlax/snorlax.aseprite holds Munchlax art in all 15 frames and has a
-    # duplicate walk-down tag that fails the exporter's uniqueness check
-    # (verified 2026-09-04) — no Snorlax art exists, so no phase-2 export.
     ("snorlax", "munchlax", "Munchlax", "munchlax"),
+    ("snorlax", "snorlax", "Snorlax", "snorlax"),
     # NOTE: wigglypuff/wigglypuff.aseprite holds Wigglytuff art (verified 2026-09-04).
     ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
     ("wigglypuff", "wigglytuff", "Wigglytuff", "wigglypuff"),
@@ -186,6 +185,16 @@ def parse_file(path: pathlib.Path) -> tuple[int, int, list[bytes], list[tuple[st
 def normalize_tags(raw_tags: list[tuple[str, int, int]]) -> list[tuple[str, int, int]]:
     """Apply the walk-dow -> walk-down fix and sort by start frame."""
     tags = [(TAG_NAME_FIXES.get(name, name), frm, to) for name, frm, to in raw_tags]
+    # snorlax/snorlax.aseprite mislabels its horizontal walk range (frames 11-14,
+    # pixel-verified side-facing art 2026-09-06) as a duplicate "walk-down". The
+    # second walk-down occurrence after walk-up is the left/right walk tag.
+    walk_downs = [index for index, (name, _frm, _to) in enumerate(tags) if name == "walk-down"]
+    if len(walk_downs) == 2:
+        walk_up_to = next(to for name, _frm, to in tags if name == "walk-up")
+        later = max(walk_downs, key=lambda index: tags[index][1])
+        if tags[later][1] > walk_up_to:
+            name, frm, to = tags[later]
+            tags[later] = ("walk-left-right", frm, to)
     tags.sort(key=lambda item: item[1])
     return tags
 
