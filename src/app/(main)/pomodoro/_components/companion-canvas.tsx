@@ -101,7 +101,9 @@ export function CompanionCanvas({
     () => (unlockedIds.length > 0 ? unlockedIds : [resolveCompanionId(selected)]),
     [unlockedIds, selected],
   );
-  const scale = unlockedIds.length > 4 ? 3 : 4;
+  // Narrow canvases (mobile) render sprites at a smaller integer scale so the ground
+  // strip is not crowded; integer scales keep the pixel art crisp.
+  const scale = canvasSize.width > 0 && canvasSize.width < 640 ? 2 : unlockedIds.length > 4 ? 3 : 4;
 
   let motionGated = !mounted || !movementEnabled || reducedMotion;
   if (mounted) {
