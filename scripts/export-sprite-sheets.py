@@ -61,9 +61,17 @@ SPECIES = [
     ("wigglypuff", "jigglypuff", "Jigglypuff", "jigglypuff"),
     ("wigglypuff", "wigglytuff", "Wigglytuff", "wigglypuff"),
     ("totodile", "totodile", "Totodile", "totodile"),
+    ("totodile", "croconow", "Croconaw", "croconow"),
+    ("totodile", "feraligatr", "Feraligatr", "feraligatr"),
     # NOTE: pickachu/raichu.aseprite holds Raichu art (verified 2026-09-04).
     ("pickachu", "pikachu", "Pikachu", "pickachu"),
     ("pickachu", "raichu", "Raichu", "raichu"),
+    ("cubone", "cubone", "Cubone", "cubone"),
+    ("cubone", "marowak", "Marowak", "marowak"),
+    # Flying species: a single fly-left-right tag carries the whole animation
+    # (see build_horizontal_export); idle and walking reuse the fly frames.
+    ("dragonite", "dragonite", "Dragonite", "dragonite"),
+    ("mewtwo", "mewtwo", "Mewtwo", "mewtwo"),
 ]
 
 # Normalize the typos present in the source tags.
@@ -190,6 +198,19 @@ def build_horizontal_export(
     require(len(set(names)) == len(names), f"duplicate tag names: {names}")
     by_name = {name: (frm, to) for name, frm, to in tags}
 
+    # Flying species: one fly-left-right tag spans every frame. The compact strip
+    # keeps all fly frames in source order; idle and walking states map onto that
+    # full range (flyers hover rather than stand, so both look like flight).
+    if set(names) == {"fly-left-right"}:
+        (fly_from, fly_to) = by_name["fly-left-right"]
+        require(fly_from == 0 and fly_to == len(frames) - 1, f"fly tag must cover all frames: {tags}")
+        compact_frames = list(frames)
+        states: dict[str, tuple[int, int, bool | None]] = {}
+        for state_name in STATE_ORDER:
+            flip: bool | None = True if state_name == "idle-left" or state_name == "walking-left" else None
+            states[state_name] = (0, len(compact_frames) - 1, flip)
+        return compact_frames, states
+
     if len(tags) == 8:
         expected_names = {
             "idle-down",
@@ -226,6 +247,23 @@ def build_horizontal_export(
         require(len(frames) == 16, f"7-tag file has {len(frames)} frames, expected 16")
         horizontal_tag_names = list(STATE_TAGS_8.values())
     else:
+        # Walk-only species: two combined tags — idle-left-right:0-0 and
+        # walk-left-right:1-(n-1). Left facings flip the shared right-facing frames.
+        if set(names) == {"idle-left-right", "walk-left-right"}:
+            idle_from, idle_to = by_name["idle-left-right"]
+            walk_from, walk_to = by_name["walk-left-right"]
+            require((idle_from, idle_to) == (0, 0), f"2-tag idle range mismatch: {tags}")
+            require(walk_from == idle_to + 1 and walk_to == len(frames) - 1, f"2-tag walk range mismatch: {tags}")
+            compact_frames = list(frames)
+            states = {
+                "idle-left": (idle_from, idle_to, True),
+                "idle-right": (idle_from, idle_to, None),
+                "walking-left": (walk_from, walk_to, True),
+                "walking-right": (walk_from, walk_to, None),
+            }
+            require(tuple(states) == STATE_ORDER, f"horizontal state order mismatch: {list(states)}")
+            return compact_frames, states
+
         require(len(tags) == 6, f"unexpected tag count {len(tags)}: {names}")
         expected_names = {
             "idle-down",
@@ -381,6 +419,10 @@ def generate_module(entries: list[dict]) -> str:
         ("snorlax", "munchlax"),
         ("wigglypuff", "jigglypuff"),
         ("pikachu", "pikachu"),
+        ("totodile", "totodile"),
+        ("cubone", "cubone"),
+        ("dragonite", "dragonite"),
+        ("mewtwo", "mewtwo"),
     ]:
         lines.append(f"  {companion_id}: {ts_literal(species_id)},")
     lines.append("};")

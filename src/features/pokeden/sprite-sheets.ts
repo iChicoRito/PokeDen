@@ -15,8 +15,14 @@ export type SpriteSpecies =
   | "jigglypuff"
   | "wigglytuff"
   | "totodile"
+  | "croconow"
+  | "feraligatr"
   | "pikachu"
-  | "raichu";
+  | "raichu"
+  | "cubone"
+  | "marowak"
+  | "dragonite"
+  | "mewtwo";
 
 export type SpriteStateName = "idle-left" | "idle-right" | "walking-left" | "walking-right";
 
@@ -229,6 +235,36 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  croconow: {
+    species: "croconow",
+    displayName: "Croconaw",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/totodile/croconow-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  feraligatr: {
+    species: "feraligatr",
+    displayName: "Feraligatr",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/totodile/feraligatr-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
   pikachu: {
     species: "pikachu",
     displayName: "Pikachu",
@@ -259,6 +295,66 @@ export const SPRITE_SHEETS: Record<SpriteSpecies, SpriteSheetEntry> = {
       "walking-right": { from: 1, to: 4 },
     },
   },
+  cubone: {
+    species: "cubone",
+    displayName: "Cubone",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/cubone/cubone-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  marowak: {
+    species: "marowak",
+    displayName: "Marowak",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/cubone/marowak-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 5,
+    states: {
+      "idle-left": { from: 0, to: 0, flip: true },
+      "idle-right": { from: 0, to: 0 },
+      "walking-left": { from: 1, to: 4, flip: true },
+      "walking-right": { from: 1, to: 4 },
+    },
+  },
+  dragonite: {
+    species: "dragonite",
+    displayName: "Dragonite",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/dragonite/dragonite-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 4,
+    states: {
+      "idle-left": { from: 0, to: 3, flip: true },
+      "idle-right": { from: 0, to: 3 },
+      "walking-left": { from: 0, to: 3, flip: true },
+      "walking-right": { from: 0, to: 3 },
+    },
+  },
+  mewtwo: {
+    species: "mewtwo",
+    displayName: "Mewtwo",
+    gender: "♂",
+    sheetUrl: "/assets/sprites/mewtwo/mewtwo-sheet.png",
+    frameWidth: 28,
+    frameHeight: 28,
+    frameCount: 4,
+    states: {
+      "idle-left": { from: 0, to: 3, flip: true },
+      "idle-right": { from: 0, to: 3 },
+      "walking-left": { from: 0, to: 3, flip: true },
+      "walking-right": { from: 0, to: 3 },
+    },
+  },
 };
 
 export const FIRST_EVOLUTION_BY_COMPANION: Record<CompanionId, SpriteSpecies> = {
@@ -269,4 +365,8 @@ export const FIRST_EVOLUTION_BY_COMPANION: Record<CompanionId, SpriteSpecies> = 
   snorlax: "munchlax",
   wigglypuff: "jigglypuff",
   pikachu: "pikachu",
+  totodile: "totodile",
+  cubone: "cubone",
+  dragonite: "dragonite",
+  mewtwo: "mewtwo",
 };

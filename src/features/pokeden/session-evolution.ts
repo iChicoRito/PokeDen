@@ -14,6 +14,10 @@ export const SESSION_BASE_SPECIES: Record<CompanionId, SpriteSpecies> = {
   snorlax: "munchlax",
   wigglypuff: "jigglypuff",
   pikachu: "pikachu",
+  totodile: "totodile",
+  cubone: "cubone",
+  dragonite: "dragonite",
+  mewtwo: "mewtwo",
 };
 
 // Phase-2/3 display species by companion. Entries whose sheet has not been
@@ -27,6 +31,10 @@ export const SESSION_EVOLUTION_SPECIES: Record<CompanionId, readonly SpriteSpeci
   snorlax: ["munchlax"],
   wigglypuff: ["jigglypuff", "wigglytuff"],
   pikachu: ["pikachu", "raichu"],
+  totodile: ["totodile", "croconow", "feraligatr"],
+  cubone: ["cubone", "marowak"],
+  dragonite: ["dragonite"],
+  mewtwo: ["mewtwo"],
 };
 
 export type SessionPhase = 0 | 1 | 2;

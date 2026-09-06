@@ -1,6 +1,17 @@
 // Single source of truth for the study-companion catalog (T-07).
 // Consumed by the onboarding companion step and the Settings companion card.
-export type CompanionId = "bulbasaur" | "charizard" | "blastoise" | "gengar" | "snorlax" | "wigglypuff" | "pikachu";
+export type CompanionId =
+  | "bulbasaur"
+  | "charizard"
+  | "blastoise"
+  | "gengar"
+  | "snorlax"
+  | "wigglypuff"
+  | "pikachu"
+  | "totodile"
+  | "cubone"
+  | "dragonite"
+  | "mewtwo";
 
 export type CompanionEntry = {
   id: CompanionId;
@@ -110,6 +121,47 @@ export const COMPANION_CATALOG: readonly CompanionCatalogEntry[] = [
     personality: "cheerful",
     image: "/assets/profiles/wigglypuff-profile.png",
     unlockStudyLevel: 4,
+  },
+  {
+    id: "totodile",
+    name: "Totodile",
+    description: "Playful and bold",
+    tagline: "Small jaws, big energy.",
+    personality: "cheerful",
+    image: "/assets/profiles/totodile-profile.png",
+    unlockStudyLevel: 2,
+    evolutions: [
+      { name: "Croconaw", companionLevel: 3, studyLevel: 3 },
+      { name: "Feraligatr", companionLevel: 6, studyLevel: 6 },
+    ],
+  },
+  {
+    id: "cubone",
+    name: "Cubone",
+    description: "Quiet and resilient",
+    tagline: "A steady heart beneath the mask.",
+    personality: "calm",
+    image: "/assets/profiles/cubone-profile.png",
+    unlockStudyLevel: 3,
+    evolutions: [{ name: "Marowak", companionLevel: 5, studyLevel: 5 }],
+  },
+  {
+    id: "dragonite",
+    name: "Dragonite",
+    description: "Warm and soaring",
+    tagline: "Drifts above the to-do list.",
+    personality: "cheerful",
+    image: "/assets/profiles/dragonite-profile.png",
+    unlockStudyLevel: 5,
+  },
+  {
+    id: "mewtwo",
+    name: "Mewtwo",
+    description: "Focused and uncommonly calm",
+    tagline: "A mind sharpened by deep work.",
+    personality: "focused",
+    image: "/assets/profiles/mewtwo-profile.png",
+    unlockStudyLevel: 6,
   },
 ];
 
