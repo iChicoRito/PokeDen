@@ -24,7 +24,8 @@ describe("rls contract", () => {
 
   it("migration restricts rows to owner via auth.uid()", () => {
     const s = src("supabase/migrations/0001_tbl_profiles.sql");
-    assert.match(s, /auth\.uid\(\)\s*=\s*user_id/);
+    // Scalar subselect form avoids per-row re-evaluation: (select auth.uid()) = user_id
+    assert.match(s, /\(select auth\.uid\(\)\)\s*=\s*user_id/);
   });
 
   it("no service_role or sb_secret strings in src outside comments", () => {

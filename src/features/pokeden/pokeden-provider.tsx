@@ -17,11 +17,10 @@ import {
   subscribeToPokeDenStorage,
 } from "@/data/pokeden/repository.client";
 import { createClient } from "@/lib/supabase/client";
-import { pullSnapshot, pushSnapshot, type PullResult } from "@/lib/sync/sync-client";
+import { type PullResult, pullSnapshot, pushSnapshot } from "@/lib/sync/sync-client";
 import { resolveSyncAction } from "@/lib/sync/sync-engine";
 
 import { COMPANION_CATALOG, type CompanionId, resolveCompanionId } from "./companions";
-import { isPristineSnapshot } from "./domain";
 import type {
   ExamInput,
   ExamUpdateInput,
@@ -36,6 +35,7 @@ import type {
   TaskInput,
   TaskUpdateInput,
 } from "./domain";
+import { isPristineSnapshot } from "./domain";
 import {
   applyStudyReward,
   createEmptyStudyProgress,
@@ -995,8 +995,9 @@ export function PokeDenProvider({ children }: Readonly<{ children: React.ReactNo
       }
     };
 
-    void Promise.race([syncWork(), new Promise<void>((resolve) => setTimeout(resolve, SYNC_TIMEOUT_MS))])
-      .finally(hydrate);
+    void Promise.race([syncWork(), new Promise<void>((resolve) => setTimeout(resolve, SYNC_TIMEOUT_MS))]).finally(
+      hydrate,
+    );
 
     return unsubscribe;
   }, [store]);

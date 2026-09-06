@@ -12,7 +12,8 @@ const src = (p) => fs.readFileSync(path.join(root, p), "utf8");
 describe("provider sync wiring", () => {
   it("provider pulls cloud snapshot on mount", () => {
     const s = src("src/features/pokeden/pokeden-provider.tsx");
-    assert.match(s, /\/api\/sync\/pull/);
+    // Mount-time sync runs through the sync-client helper (which hits /api/sync/pull).
+    assert.match(s, /pullSnapshot/);
   });
 
   it("provider notifies debounced push after saves", () => {

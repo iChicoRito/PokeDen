@@ -43,7 +43,8 @@ describe("sync contract", () => {
   it("migration enables RLS with owner-only policy on tbl_ tables", () => {
     const s = src("supabase/migrations/0001_tbl_profiles.sql");
     assert.match(s, /ENABLE ROW LEVEL SECURITY/);
-    assert.match(s, /auth\.uid\(\)\s*=\s*user_id/);
+    // Scalar subselect form avoids per-row re-evaluation: (select auth.uid()) = user_id
+    assert.match(s, /\(select auth\.uid\(\)\)\s*=\s*user_id/);
     assert.match(s, /CREATE TABLE.*tbl_profiles/);
   });
 
